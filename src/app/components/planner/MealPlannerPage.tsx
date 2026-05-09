@@ -16,6 +16,7 @@ const TYPE_COLORS: Record<string, string> = {
   Lunch: 'border-l-green-400 bg-green-50 dark:bg-green-900/20',
   Dinner: 'border-l-blue-400 bg-blue-50 dark:bg-blue-900/20',
   Snack: 'border-l-purple-400 bg-purple-50 dark:bg-purple-900/20',
+  'Protein Shake': 'border-l-pink-400 bg-pink-50 dark:bg-pink-900/20',
 };
 
 const TYPE_BADGE: Record<string, string> = {
@@ -23,13 +24,14 @@ const TYPE_BADGE: Record<string, string> = {
   Lunch: 'bg-green-100 text-green-700',
   Dinner: 'bg-blue-100 text-blue-700',
   Snack: 'bg-purple-100 text-purple-700',
+  'Protein Shake': 'bg-pink-100 text-pink-700',
 };
 
-const SLOTS = ['breakfast', 'lunch', 'snack', 'dinner'] as const;
+const SLOTS = ['breakfast', 'lunch', 'snack', 'proteinShake', 'dinner'] as const;
 type Slot = typeof SLOTS[number];
-const SLOT_LABELS: Record<Slot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
-const SLOT_EMOJIS: Record<Slot, string> = { breakfast: '🌅', lunch: '☀️', snack: '🍎', dinner: '🌙' };
-const SLOT_TYPES: Record<Slot, MealType> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' };
+const SLOT_LABELS: Record<Slot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', proteinShake: 'Protein Shake', dinner: 'Dinner' };
+const SLOT_EMOJIS: Record<Slot, string> = { breakfast: '🌅', lunch: '☀️', snack: '🍎', proteinShake: '💪', dinner: '🌙' };
+const SLOT_TYPES: Record<Slot, MealType> = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', proteinShake: 'Protein Shake', dinner: 'Dinner' };
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 // ─── Slot Picker ──────────────────────────────────────────────────────────────

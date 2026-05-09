@@ -1,4 +1,4 @@
-export type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack';
+export type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Protein Shake';
 
 export interface Ingredient {
   id: string;
@@ -42,6 +42,7 @@ export interface DayPlan {
   breakfast?: string;
   lunch?: string;
   snack?: string;
+  proteinShake?: string;
   dinner?: string;
 }
 

@@ -13,8 +13,8 @@ interface AppContextType {
   deleteMeal: (id: string) => void;
   getWeekPlan: (weekStartDate: string) => WeekPlan | undefined;
   saveWeekPlan: (plan: WeekPlan) => void;
-  addMealToSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'dinner', mealId: string) => void;
-  removeMealFromSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'dinner') => void;
+  addMealToSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => void;
+  removeMealFromSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => void;
   getGroceryList: (weekStartDate: string) => GroceryList | undefined;
   saveGroceryList: (list: GroceryList) => void;
   toggleGroceryItem: (listId: string, itemId: string) => void;
@@ -41,6 +41,7 @@ const typeKeywords: Record<MealType, string[]> = {
   Lunch: ['salad', 'sandwich', 'soup', 'wrap', 'panini', 'caesar', 'minestrone'],
   Dinner: ['pasta', 'steak', 'chicken', 'fish', 'salmon', 'rice', 'taco', 'stir fry', 'curry', 'roast', 'burger', 'pizza'],
   Snack: ['yogurt', 'fruit', 'nuts', 'energy', 'smoothie', 'bowl', 'toast', 'avocado'],
+  'Protein Shake': ['shake', 'protein', 'whey', 'casein', 'pea protein', 'plant protein', 'post-workout', 'recovery shake'],
 };
 
 const INGREDIENT_CATEGORIES: Record<string, string> = {
@@ -108,7 +109,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const addMealToSlot = useCallback((weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'dinner', mealId: string) => {
+  const addMealToSlot = useCallback((weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => {
     setWeekPlans(prev => {
       const plan = prev.find(p => p.startDate === weekStartDate);
       if (plan) {
@@ -129,7 +130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeMealFromSlot = useCallback((weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'dinner') => {
+  const removeMealFromSlot = useCallback((weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => {
     setWeekPlans(prev => prev.map(p => {
       if (p.startDate !== weekStartDate) return p;
       const days = p.days.map(d => {
@@ -217,6 +218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const lunchMeals = getMealsForSlot('lunch', 'Lunch');
       const dinnerMeals = getMealsForSlot('dinner', 'Dinner');
       const snackMeals = getMealsForSlot('snack', 'Snack');
+      const proteinShakeMeals = getMealsForSlot('proteinShake', 'Protein Shake');
 
       const breakfast = existing?.breakfast || pick(breakfastMeals, used);
       if (breakfast) used.push(breakfast);
@@ -225,7 +227,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const dinner = existing?.dinner || pick(dinnerMeals, used);
       if (dinner) used.push(dinner);
       const snack = existing?.snack || pick(snackMeals, used);
-      return { date, breakfast, lunch, snack, dinner };
+      if (snack) used.push(snack);
+      const proteinShake = existing?.proteinShake || pick(proteinShakeMeals, used);
+      return { date, breakfast, lunch, snack, proteinShake, dinner };
     });
     return { id: weekStartDate, startDate: weekStartDate, days, aiGenerated: true };
   }, [meals, weekPlans]);
@@ -234,12 +238,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await new Promise(r => setTimeout(r, 3000));
     const plan = weekPlans.find(p => p.startDate === weekStartDate);
     if (!plan) throw new Error('No plan found');
-    const allMealIds = plan.days.flatMap(d => [d.breakfast, d.lunch, d.snack, d.dinner].filter(Boolean) as string[]);
+    const allMealIds = plan.days.flatMap(d => [d.breakfast, d.lunch, d.snack, d.proteinShake, d.dinner].filter(Boolean) as string[]);
     const uniqueMealIds = [...new Set(allMealIds)];
     const planMeals = uniqueMealIds.map(id => meals.find(m => m.id === id)).filter(Boolean) as typeof meals;
     const ingredientMap: Map<string, { quantity: number; unit: string; forMeals: string[]; firstNeededDate: string }> = new Map();
     planMeals.forEach(meal => {
-      const mealDay = plan.days.find(d => [d.breakfast, d.lunch, d.snack, d.dinner].includes(meal.id));
+      const mealDay = plan.days.find(d => [d.breakfast, d.lunch, d.snack, d.proteinShake, d.dinner].includes(meal.id));
       const firstNeeded = mealDay?.date || weekStartDate;
       meal.ingredients.forEach(ing => {
         const key = ing.name.toLowerCase();
