@@ -1,23 +1,20 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { Meal, WeekPlan, GroceryList, GroceryItem, MealType, NutritionalValue, Ingredient } from '../types';
-import { INITIAL_MEALS, INITIAL_WEEK_PLANS, INITIAL_GROCERY_LISTS } from '../data/mockData';
-import { isVeggieMeal } from '../utils/veggieUtils';
-import { format, addDays, parseISO } from 'date-fns';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { Meal, WeekPlan, GroceryList, MealType, NutritionalValue, Ingredient } from '../types';
 
 interface AppContextType {
   meals: Meal[];
   weekPlans: WeekPlan[];
   groceryLists: GroceryList[];
-  addMeal: (meal: Omit<Meal, 'id' | 'createdAt'>) => Meal;
-  updateMeal: (meal: Meal) => void;
-  deleteMeal: (id: string) => void;
+  addMeal: (meal: Omit<Meal, 'id' | 'createdAt'>) => Promise<Meal>;
+  updateMeal: (meal: Meal) => Promise<void>;
+  deleteMeal: (id: string) => Promise<void>;
   getWeekPlan: (weekStartDate: string) => WeekPlan | undefined;
   saveWeekPlan: (plan: WeekPlan) => void;
-  addMealToSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => void;
-  removeMealFromSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => void;
+  addMealToSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => Promise<void>;
+  removeMealFromSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => Promise<void>;
   getGroceryList: (weekStartDate: string) => GroceryList | undefined;
   saveGroceryList: (list: GroceryList) => void;
-  toggleGroceryItem: (listId: string, itemId: string) => void;
+  toggleGroceryItem: (listId: string, itemId: string) => Promise<void>;
   aiCategorize: (name: string, ingredients: string[]) => Promise<{ category: string; types: MealType[] }>;
   aiCalculateNutrition: (name: string, ingredients: Ingredient[]) => Promise<NutritionalValue>;
   aiGenerateMealPlan: (weekStartDate: string, veggiePrefs?: Set<string>) => Promise<WeekPlan>;
@@ -26,7 +23,10 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
-// AI Mock helpers
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+const DEMO_EMAIL = 'demo@lifemanagement.local';
+const DEMO_PASSWORD = 'DemoPass123!';
+
 const categoryKeywords: Record<string, string[]> = {
   Italian: ['pasta', 'pizza', 'risotto', 'carbonara', 'arrabiata', 'pesto', 'tiramisu', 'lasagna'],
   Mediterranean: ['salad', 'hummus', 'falafel', 'greek', 'quinoa', 'olive', 'yogurt', 'tzatziki'],
@@ -44,260 +44,243 @@ const typeKeywords: Record<MealType, string[]> = {
   'Protein Shake': ['shake', 'protein', 'whey', 'casein', 'pea protein', 'plant protein', 'post-workout', 'recovery shake'],
 };
 
-const INGREDIENT_CATEGORIES: Record<string, string> = {
-  lettuce: 'Produce', tomato: 'Produce', spinach: 'Produce', pepper: 'Produce',
-  onion: 'Produce', garlic: 'Produce', lemon: 'Produce', lime: 'Produce',
-  banana: 'Produce', berries: 'Produce', avocado: 'Produce', zucchini: 'Produce',
-  carrot: 'Produce', celery: 'Produce', potato: 'Produce', asparagus: 'Produce',
-  herb: 'Produce', cilantro: 'Produce', dill: 'Produce', parsley: 'Produce', ginger: 'Produce',
-  pineapple: 'Produce', mushroom: 'Produce',
-  chicken: 'Meat & Seafood', beef: 'Meat & Seafood', pork: 'Meat & Seafood',
-  salmon: 'Meat & Seafood', tuna: 'Meat & Seafood', shrimp: 'Meat & Seafood', fish: 'Meat & Seafood',
-  milk: 'Dairy & Eggs', egg: 'Dairy & Eggs', butter: 'Dairy & Eggs',
-  cheese: 'Dairy & Eggs', parmesan: 'Dairy & Eggs', yogurt: 'Dairy & Eggs', cream: 'Dairy & Eggs',
-  bread: 'Bakery & Grains', pasta: 'Bakery & Grains', rice: 'Bakery & Grains',
-  flour: 'Bakery & Grains', tortilla: 'Bakery & Grains', quinoa: 'Bakery & Grains',
-  granola: 'Bakery & Grains', sourdough: 'Bakery & Grains', crouton: 'Bakery & Grains',
-  oil: 'Pantry & Spices', sauce: 'Pantry & Spices', soy: 'Pantry & Spices',
-  honey: 'Pantry & Spices', maple: 'Pantry & Spices', sugar: 'Pantry & Spices',
-  vanilla: 'Pantry & Spices', baking: 'Pantry & Spices', salt: 'Pantry & Spices',
-  chili: 'Pantry & Spices', cumin: 'Pantry & Spices', paprika: 'Pantry & Spices',
-  chia: 'Pantry & Spices', almond: 'Pantry & Spices', sesame: 'Pantry & Spices',
-  'frozen berries': 'Frozen', 'frozen banana': 'Frozen',
-};
-
-function categorizeIngredient(name: string): string {
-  const lower = name.toLowerCase();
-  for (const [key, cat] of Object.entries(INGREDIENT_CATEGORIES)) {
-    if (lower.includes(key)) return cat;
+async function authFetch(path: string, init: RequestInit = {}) {
+  let accessToken = localStorage.getItem('lm_access_token');
+  if (!accessToken) {
+    await bootstrapAuth();
+    accessToken = localStorage.getItem('lm_access_token');
   }
-  return 'Pantry & Spices';
+
+  const doFetch = async (token?: string) => fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+
+  let response = await doFetch(accessToken || undefined);
+  if (response.status === 401) {
+    const refreshed = await refreshAuth();
+    if (refreshed) {
+      response = await doFetch(localStorage.getItem('lm_access_token') || undefined);
+    }
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `HTTP ${response.status}`);
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+async function bootstrapAuth() {
+  const loginRes = await fetch(`${API_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD }),
+  });
+
+  let data: any;
+  if (loginRes.ok) {
+    data = await loginRes.json();
+  } else {
+    const registerRes = await fetch(`${API_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD }),
+    });
+    if (!registerRes.ok) throw new Error('Unable to bootstrap auth');
+    data = await registerRes.json();
+  }
+
+  localStorage.setItem('lm_access_token', data.accessToken);
+  localStorage.setItem('lm_refresh_token', data.refreshToken);
+}
+
+async function refreshAuth() {
+  const refreshToken = localStorage.getItem('lm_refresh_token');
+  if (!refreshToken) return false;
+
+  const res = await fetch(`${API_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${refreshToken}`,
+    },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!res.ok) return false;
+  const data = await res.json();
+  localStorage.setItem('lm_access_token', data.accessToken);
+  localStorage.setItem('lm_refresh_token', data.refreshToken);
+  return true;
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [meals, setMeals] = useState<Meal[]>(INITIAL_MEALS);
-  const [weekPlans, setWeekPlans] = useState<WeekPlan[]>(INITIAL_WEEK_PLANS);
-  const [groceryLists, setGroceryLists] = useState<GroceryList[]>(INITIAL_GROCERY_LISTS);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [weekPlans, setWeekPlans] = useState<WeekPlan[]>([]);
+  const [groceryLists, setGroceryLists] = useState<GroceryList[]>([]);
 
-  const addMeal = useCallback((mealData: Omit<Meal, 'id' | 'createdAt'>) => {
-    const newMeal: Meal = {
-      ...mealData,
-      id: `meal-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    setMeals(prev => [newMeal, ...prev]);
-    return newMeal;
-  }, []);
-
-  const updateMeal = useCallback((meal: Meal) => {
-    setMeals(prev => prev.map(m => m.id === meal.id ? meal : m));
-  }, []);
-
-  const deleteMeal = useCallback((id: string) => {
-    setMeals(prev => prev.filter(m => m.id !== id));
-  }, []);
-
-  const getWeekPlan = useCallback((weekStartDate: string) => {
-    return weekPlans.find(p => p.startDate === weekStartDate);
-  }, [weekPlans]);
+  const getWeekPlan = useCallback((weekStartDate: string) => weekPlans.find((p) => p.startDate === weekStartDate), [weekPlans]);
+  const getGroceryList = useCallback((weekStartDate: string) => groceryLists.find((l) => l.weekStartDate === weekStartDate), [groceryLists]);
 
   const saveWeekPlan = useCallback((plan: WeekPlan) => {
-    setWeekPlans(prev => {
-      const exists = prev.find(p => p.startDate === plan.startDate);
-      if (exists) return prev.map(p => p.startDate === plan.startDate ? plan : p);
-      return [...prev, plan];
+    setWeekPlans((prev) => {
+      const exists = prev.find((p) => p.startDate === plan.startDate);
+      if (!exists) return [...prev, plan];
+      return prev.map((p) => (p.startDate === plan.startDate ? plan : p));
     });
   }, []);
-
-  const addMealToSlot = useCallback((weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => {
-    setWeekPlans(prev => {
-      const plan = prev.find(p => p.startDate === weekStartDate);
-      if (plan) {
-        const days = plan.days.map(d => d.date === date ? { ...d, [slot]: mealId } : d);
-        return prev.map(p => p.startDate === weekStartDate ? { ...p, days } : p);
-      }
-      // Create new plan
-      const start = parseISO(weekStartDate);
-      const newPlan: WeekPlan = {
-        id: weekStartDate,
-        startDate: weekStartDate,
-        days: Array.from({ length: 7 }, (_, i) => ({
-          date: format(addDays(start, i), 'yyyy-MM-dd'),
-        })),
-      };
-      const days = newPlan.days.map(d => d.date === date ? { ...d, [slot]: mealId } : d);
-      return [...prev, { ...newPlan, days }];
-    });
-  }, []);
-
-  const removeMealFromSlot = useCallback((weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => {
-    setWeekPlans(prev => prev.map(p => {
-      if (p.startDate !== weekStartDate) return p;
-      const days = p.days.map(d => {
-        if (d.date !== date) return d;
-        const updated = { ...d };
-        delete updated[slot];
-        return updated;
-      });
-      return { ...p, days };
-    }));
-  }, []);
-
-  const getGroceryList = useCallback((weekStartDate: string) => {
-    return groceryLists.find(l => l.weekStartDate === weekStartDate);
-  }, [groceryLists]);
 
   const saveGroceryList = useCallback((list: GroceryList) => {
-    setGroceryLists(prev => {
-      const exists = prev.find(l => l.weekStartDate === list.weekStartDate);
-      if (exists) return prev.map(l => l.weekStartDate === list.weekStartDate ? list : l);
-      return [...prev, list];
+    setGroceryLists((prev) => {
+      const exists = prev.find((l) => l.weekStartDate === list.weekStartDate);
+      if (!exists) return [...prev, list];
+      return prev.map((l) => (l.weekStartDate === list.weekStartDate ? list : l));
     });
   }, []);
 
-  const toggleGroceryItem = useCallback((listId: string, itemId: string) => {
-    setGroceryLists(prev => prev.map(list => {
-      if (list.id !== listId) return list;
-      return { ...list, items: list.items.map(item => item.id === itemId ? { ...item, checked: !item.checked } : item) };
-    }));
+  const loadWeekPlan = useCallback(async (weekStartDate: string) => {
+    const plan = await authFetch(`/planner/week/${weekStartDate}`);
+    saveWeekPlan(plan);
+    return plan as WeekPlan;
+  }, [saveWeekPlan]);
+
+  const loadGrocery = useCallback(async (weekStartDate: string) => {
+    const list = await authFetch(`/groceries/${weekStartDate}`);
+    if (list) saveGroceryList(list);
+  }, [saveGroceryList]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await bootstrapAuth();
+        const mealsRes = await authFetch('/meals');
+        setMeals(mealsRes || []);
+
+        const today = new Date();
+        const monday = new Date(today);
+        const d = monday.getDay();
+        const diff = d === 0 ? -6 : 1 - d;
+        monday.setDate(monday.getDate() + diff);
+
+        const weekStarts: string[] = [];
+        for (let i = -2; i <= 2; i++) {
+          const w = new Date(monday);
+          w.setDate(w.getDate() + i * 7);
+          weekStarts.push(w.toISOString().slice(0, 10));
+        }
+
+        for (const ws of weekStarts) {
+          await loadWeekPlan(ws);
+          await loadGrocery(ws);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [loadWeekPlan, loadGrocery]);
+
+  const addMeal = useCallback(async (mealData: Omit<Meal, 'id' | 'createdAt'>) => {
+    const created = await authFetch('/meals', { method: 'POST', body: JSON.stringify(mealData) });
+    setMeals((prev) => [created, ...prev]);
+    return created as Meal;
   }, []);
 
-  // AI Mock Functions
-  const aiCategorize = useCallback(async (name: string, ingredients: string[]): Promise<{ category: string; types: MealType[] }> => {
-    await new Promise(r => setTimeout(r, 1500));
+  const updateMeal = useCallback(async (meal: Meal) => {
+    const updated = await authFetch(`/meals/${meal.id}`, { method: 'PATCH', body: JSON.stringify(meal) });
+    setMeals((prev) => prev.map((m) => (m.id === meal.id ? updated : m)));
+  }, []);
+
+  const deleteMeal = useCallback(async (id: string) => {
+    await authFetch(`/meals/${id}`, { method: 'DELETE' });
+    setMeals((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
+  const addMealToSlot = useCallback(async (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => {
+    const plan = await authFetch(`/planner/week/${weekStartDate}/slot`, {
+      method: 'POST',
+      body: JSON.stringify({ date, slot, mealId }),
+    });
+    saveWeekPlan(plan as WeekPlan);
+  }, [saveWeekPlan]);
+
+  const removeMealFromSlot = useCallback(async (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => {
+    const plan = await authFetch(`/planner/week/${weekStartDate}/slot`, {
+      method: 'POST',
+      body: JSON.stringify({ date, slot }),
+    });
+    saveWeekPlan(plan as WeekPlan);
+  }, [saveWeekPlan]);
+
+  const toggleGroceryItem = useCallback(async (listId: string, itemId: string) => {
+    const list = groceryLists.find((l) => l.id === listId);
+    if (!list) return;
+    const updated = await authFetch(`/groceries/${listId}/items/${itemId}/toggle`, { method: 'PATCH' });
+    saveGroceryList(updated as GroceryList);
+  }, [groceryLists, saveGroceryList]);
+
+  const aiCategorize = useCallback(async (name: string): Promise<{ category: string; types: MealType[] }> => {
     const lower = name.toLowerCase();
     let category = 'Healthy';
     for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-      if (keywords.some(k => lower.includes(k))) { category = cat; break; }
+      if (keywords.some((k) => lower.includes(k))) {
+        category = cat;
+        break;
+      }
     }
+
     const types: MealType[] = [];
     for (const [type, keywords] of Object.entries(typeKeywords)) {
-      if (keywords.some(k => lower.includes(k))) types.push(type as MealType);
+      if (keywords.some((k) => lower.includes(k))) types.push(type as MealType);
     }
     if (types.length === 0) types.push('Dinner');
     return { category, types };
   }, []);
 
-  const aiCalculateNutrition = useCallback(async (name: string, ingredients: Ingredient[]): Promise<NutritionalValue> => {
-    await new Promise(r => setTimeout(r, 2000));
-    const calBase = 200 + Math.floor(Math.random() * 300);
-    const proteinBase = 8 + Math.floor(Math.random() * 35);
-    return {
-      calories: calBase,
-      protein: proteinBase,
-      carbs: 20 + Math.floor(Math.random() * 60),
-      fat: 5 + Math.floor(Math.random() * 25),
-      fiber: 2 + Math.floor(Math.random() * 8),
-      sugar: 3 + Math.floor(Math.random() * 20),
-      sodium: 100 + Math.floor(Math.random() * 700),
-    };
+  const aiCalculateNutrition = useCallback(async (): Promise<NutritionalValue> => {
+    return { calories: 350, protein: 24, carbs: 32, fat: 11, fiber: 5, sugar: 8, sodium: 320 };
   }, []);
 
-  const aiGenerateMealPlan = useCallback(async (weekStartDate: string, veggiePrefs?: Set<string>): Promise<WeekPlan> => {
-    await new Promise(r => setTimeout(r, 2500));
-    const start = parseISO(weekStartDate);
-    const pick = (arr: string[], exclude: string[]) => {
-      const available = arr.filter(id => !exclude.includes(id));
-      return available[Math.floor(Math.random() * available.length)] || arr[0];
-    };
-    const existingPlan = weekPlans.find(p => p.startDate === weekStartDate);
-    const days = Array.from({ length: 7 }, (_, i) => {
-      const date = format(addDays(start, i), 'yyyy-MM-dd');
-      const existing = existingPlan?.days.find(d => d.date === date);
-      const used: string[] = [];
+  const aiGenerateMealPlan = useCallback(async (weekStartDate: string) => {
+    const plan = await authFetch(`/planner/week/${weekStartDate}/ai-generate`, { method: 'POST' });
+    saveWeekPlan(plan as WeekPlan);
+    return plan as WeekPlan;
+  }, [saveWeekPlan]);
 
-      const getMealsForSlot = (slot: string, type: MealType): string[] => {
-        const mustBeVeggie = veggiePrefs?.has(`${i}-${slot}`) ?? false;
-        if (mustBeVeggie) {
-          return meals.filter(m => m.types.includes(type) && isVeggieMeal(m)).map(m => m.id);
-        }
-        return meals.filter(m => m.types.includes(type)).map(m => m.id);
-      };
-
-      const breakfastMeals = getMealsForSlot('breakfast', 'Breakfast');
-      const lunchMeals = getMealsForSlot('lunch', 'Lunch');
-      const dinnerMeals = getMealsForSlot('dinner', 'Dinner');
-      const snackMeals = getMealsForSlot('snack', 'Snack');
-      const proteinShakeMeals = getMealsForSlot('proteinShake', 'Protein Shake');
-
-      const breakfast = existing?.breakfast || pick(breakfastMeals, used);
-      if (breakfast) used.push(breakfast);
-      const lunch = existing?.lunch || pick(lunchMeals, used);
-      if (lunch) used.push(lunch);
-      const dinner = existing?.dinner || pick(dinnerMeals, used);
-      if (dinner) used.push(dinner);
-      const snack = existing?.snack || pick(snackMeals, used);
-      if (snack) used.push(snack);
-      const proteinShake = existing?.proteinShake || pick(proteinShakeMeals, used);
-      return { date, breakfast, lunch, snack, proteinShake, dinner };
-    });
-    return { id: weekStartDate, startDate: weekStartDate, days, aiGenerated: true };
-  }, [meals, weekPlans]);
-
-  const aiGenerateGroceryList = useCallback(async (weekStartDate: string): Promise<GroceryList> => {
-    await new Promise(r => setTimeout(r, 3000));
-    const plan = weekPlans.find(p => p.startDate === weekStartDate);
-    if (!plan) throw new Error('No plan found');
-    const allMealIds = plan.days.flatMap(d => [d.breakfast, d.lunch, d.snack, d.proteinShake, d.dinner].filter(Boolean) as string[]);
-    const uniqueMealIds = [...new Set(allMealIds)];
-    const planMeals = uniqueMealIds.map(id => meals.find(m => m.id === id)).filter(Boolean) as typeof meals;
-    const ingredientMap: Map<string, { quantity: number; unit: string; forMeals: string[]; firstNeededDate: string }> = new Map();
-    planMeals.forEach(meal => {
-      const mealDay = plan.days.find(d => [d.breakfast, d.lunch, d.snack, d.proteinShake, d.dinner].includes(meal.id));
-      const firstNeeded = mealDay?.date || weekStartDate;
-      meal.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase();
-        if (ingredientMap.has(key)) {
-          const existing = ingredientMap.get(key)!;
-          existing.forMeals.push(meal.name);
-          if (firstNeeded < existing.firstNeededDate) existing.firstNeededDate = firstNeeded;
-        } else {
-          ingredientMap.set(key, { quantity: parseFloat(ing.amount) || 1, unit: ing.unit, forMeals: [meal.name], firstNeededDate: firstNeeded });
-        }
-      });
-    });
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const shelfLifeDays: Record<string, number> = { 'Meat & Seafood': 2, 'Produce': 4, 'Dairy & Eggs': 5, 'Bakery & Grains': 5, 'Pantry & Spices': 365, 'Frozen': 90 };
-    const items: GroceryItem[] = Array.from(ingredientMap.entries()).map(([name, data], i) => {
-      const category = categorizeIngredient(name);
-      const shelfLife = shelfLifeDays[category] || 7;
-      const neededDate = parseISO(data.firstNeededDate);
-      const buyByDate = format(addDays(neededDate, -Math.max(1, Math.floor(shelfLife / 2))), 'yyyy-MM-dd');
-      let urgency: GroceryItem['urgency'] = 'anytime';
-      if (buyByDate <= today) urgency = 'today';
-      else if (buyByDate <= format(addDays(parseISO(today), 4), 'yyyy-MM-dd')) urgency = 'this-week';
-      return {
-        id: `g-${Date.now()}-${i}`,
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        quantity: data.quantity,
-        unit: data.unit,
-        category,
-        checked: false,
-        buyByDate,
-        urgency,
-        forMeals: [...new Set(data.forMeals)],
-      };
-    });
-    return {
-      id: `grocery-${Date.now()}`,
-      weekPlanId: weekStartDate,
-      weekStartDate,
-      generatedAt: new Date().toISOString(),
-      items: items.sort((a, b) => {
-        const order = { today: 0, 'this-week': 1, anytime: 2 };
-        return (order[a.urgency || 'anytime'] - order[b.urgency || 'anytime']);
-      }),
-    };
-  }, [meals, weekPlans]);
+  const aiGenerateGroceryList = useCallback(async (weekStartDate: string) => {
+    const list = await authFetch(`/groceries/${weekStartDate}/generate`, { method: 'POST' });
+    saveGroceryList(list as GroceryList);
+    return list as GroceryList;
+  }, [saveGroceryList]);
 
   return (
-    <AppContext.Provider value={{
-      meals, weekPlans, groceryLists,
-      addMeal, updateMeal, deleteMeal,
-      getWeekPlan, saveWeekPlan, addMealToSlot, removeMealFromSlot,
-      getGroceryList, saveGroceryList, toggleGroceryItem,
-      aiCategorize, aiCalculateNutrition, aiGenerateMealPlan, aiGenerateGroceryList,
-    }}>
+    <AppContext.Provider
+      value={{
+        meals,
+        weekPlans,
+        groceryLists,
+        addMeal,
+        updateMeal,
+        deleteMeal,
+        getWeekPlan,
+        saveWeekPlan,
+        addMealToSlot,
+        removeMealFromSlot,
+        getGroceryList,
+        saveGroceryList,
+        toggleGroceryItem,
+        aiCategorize,
+        aiCalculateNutrition,
+        aiGenerateMealPlan,
+        aiGenerateGroceryList,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

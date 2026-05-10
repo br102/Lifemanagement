@@ -1,0 +1,14 @@
+# Ignore the root .env file
+.env
+
+# Ignore the .env file in the backend directory
+backend/.env
+
+# Optional: Ignore all .env files in any subdirectory
+**/.env
+
+# Optional: Ignore local/development environment variations
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

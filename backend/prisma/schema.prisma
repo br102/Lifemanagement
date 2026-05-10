@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  PROTEIN_SHAKE
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  refreshTokenHash String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  meals          Meal[]
+  weekPlans      WeekPlan[]
+  groceryLists   GroceryList[]
+}
+
+model Meal {
+  id          String     @id @default(cuid())
+  userId      String
+  name        String
+  score       Int
+  categoryId  String?
+  link        String?
+  image       String?
+  prepTime    Int?
+  cookTime    Int?
+  servings    Int?
+  aiCategorized Boolean @default(false)
+  aiNutrition Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    MealCategory? @relation(fields: [categoryId], references: [id])
+  ingredients MealIngredient[]
+  steps       MealStep[]
+  nutrition   Nutrition?
+  tags        MealTagOnMeal[]
+  types       MealTypeOnMeal[]
+
+  @@index([userId, createdAt])
+}
+
+model MealCategory {
+  id    String @id @default(cuid())
+  name  String @unique
+  meals Meal[]
+}
+
+model MealTag {
+  id    String @id @default(cuid())
+  name  String @unique
+  meals MealTagOnMeal[]
+}
+
+model MealTagOnMeal {
+  mealId String
+  tagId  String
+  meal   Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  tag    MealTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([mealId, tagId])
+}
+
+model Ingredient {
+  id    String @id @default(cuid())
+  name  String @unique
+  meals MealIngredient[]
+}
+
+model MealIngredient {
+  id           String @id @default(cuid())
+  mealId       String
+  ingredientId String
+  amount       String
+  unit         String
+  meal         Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@index([mealId])
+}
+
+model MealStep {
+  id      String @id @default(cuid())
+  mealId  String
+  orderNo Int
+  text    String
+  meal    Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@index([mealId, orderNo])
+}
+
+model Nutrition {
+  id        String @id @default(cuid())
+  mealId    String @unique
+  calories  Int
+  protein   Int
+  carbs     Int
+  fat       Int
+  fiber     Int
+  sugar     Int
+  sodium    Int
+  meal      Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+}
+
+model MealTypeOnMeal {
+  mealId String
+  type   MealType
+  meal   Meal @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@id([mealId, type])
+}
+
+model WeekPlan {
+  id         String   @id @default(cuid())
+  userId     String
+  startDate  String
+  aiGenerated Boolean @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days       DayPlan[]
+
+  @@unique([userId, startDate])
+}
+
+model DayPlan {
+  id           String @id @default(cuid())
+  weekPlanId   String
+  date         String
+  breakfastId  String?
+  lunchId      String?
+  snackId      String?
+  proteinShakeId String?
+  dinnerId     String?
+  weekPlan     WeekPlan @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([weekPlanId, date])
+}
+
+model GroceryList {
+  id            String @id @default(cuid())
+  userId        String
+  weekPlanId    String
+  weekStartDate String
+  generatedAt   DateTime @default(now())
+  user          User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items         GroceryItem[]
+
+  @@unique([userId, weekStartDate])
+  @@index([weekPlanId])
+}
+
+model GroceryItem {
+  id                    String @id @default(cuid())
+  groceryListId         String
+  name                  String
+  quantity              Float
+  unit                  String
+  category              String
+  checked               Boolean @default(false)
+  estimatedExpirationDate String?
+  recommendedPurchaseDate String?
+  buyByDate             String?
+  urgency               String?
+  notes                 String?
+  forMeals              String[]
+  groceryList           GroceryList @relation(fields: [groceryListId], references: [id], onDelete: Cascade)
+
+  @@index([groceryListId, category])
+}

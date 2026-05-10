@@ -73,6 +73,27 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
   const watchedName = watch('name');
   const watchedImage = watch('image');
 
+  const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+
+  const handleImageFile = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return;
+    const token = localStorage.getItem('lm_access_token');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_URL}/meals/upload-image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+
+    if (!res.ok) return;
+    const data = await res.json();
+    const imageUrl = `${API_URL}${data.imageUrl}`;
+    setValue('image', imageUrl);
+  };
+
   const toggleType = (type: MealType) => {
     const current = watchedTypes || [];
     if (current.includes(type)) setValue('types', current.filter(t => t !== type));
@@ -181,6 +202,25 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Image URL</label>
                   <input {...register('image')} placeholder="https://..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <div
+                    className="mt-2 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-4 text-center"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleImageFile(e.dataTransfer.files?.[0]);
+                    }}
+                  >
+                    <p className="text-xs text-amber-700 mb-2">Drag & drop an image here</p>
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-amber-200 rounded-full text-xs text-amber-700 cursor-pointer hover:bg-amber-50">
+                      Upload image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleImageFile(e.target.files?.[0])}
+                      />
+                    </label>
+                  </div>
                   {watchedImage && <img src={watchedImage} alt="preview" className="mt-2 w-full h-32 object-cover rounded-xl" onError={e => e.currentTarget.style.display='none'} />}
                 </div>
                 <div>
