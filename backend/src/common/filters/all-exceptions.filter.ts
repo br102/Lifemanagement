@@ -7,7 +7,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse();
 
     const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
-    const message = exception instanceof HttpException ? exception.getResponse() : 'Internal server error';
+    const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+    const message = exception instanceof HttpException
+      ? exception.getResponse()
+      : (exception instanceof Error ? exception.message : 'Internal server error');
+
+    if (exception instanceof Error) {
+      // eslint-disable-next-line no-console
+      console.error('[API ERROR]', exception.message, exception.stack);
+    } else {
+      // eslint-disable-next-line no-console
+      console.error('[API ERROR]', exception);
+    }
 
     response.status(status).json({
       success: false,

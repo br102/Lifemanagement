@@ -1,6 +1,10 @@
 export interface MealClassification {
+  primaryCategory: string;
+  categories: string[];
   category: string;
   types: string[];
+  vegetarian: boolean;
+  lactoseFree: boolean;
 }
 
 export interface NutritionResult {

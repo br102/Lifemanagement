@@ -23,11 +23,46 @@ export class MealsService {
   }
 
   async create(userId: string, dto: CreateMealDto) {
-    const category = dto.category ?? (await this.ai.classifyMeal(dto.name, dto.ingredients.map((i) => i.name))).category;
-    const nutrition = dto.nutritionalValue?.calories ? dto.nutritionalValue : await this.ai.estimateNutrition(dto.name, dto.ingredients);
+    const hasCategory = typeof dto.category === 'string' && dto.category.trim().length > 0;
+    const needsAiTags = !dto.tags || dto.tags.length === 0;
+    const aiClassification = !hasCategory || needsAiTags
+      ? await this.ai.classifyMeal(dto.name, dto.ingredients.map((i) => i.name))
+      : null;
+    const category = hasCategory
+      ? dto.category!.trim()
+      : (aiClassification?.primaryCategory ?? 'General');
+
+    const hasNutrition = Number.isFinite(dto.nutritionalValue?.calories) && Number(dto.nutritionalValue?.calories) > 0;
+    const nutrition = hasNutrition
+      ? dto.nutritionalValue
+      : await this.ai.estimateNutrition(dto.name, dto.ingredients);
+    const autoTags = aiClassification
+      ? [
+          ...aiClassification.categories,
+          aiClassification.vegetarian ? 'vegetarian' : 'non-vegetarian',
+          aiClassification.lactoseFree ? 'lactose-free' : 'contains-lactose',
+        ]
+      : [];
+    const finalTags = Array.from(new Set([...(dto.tags ?? []), ...autoTags].map((tag) => tag.trim()).filter(Boolean)));
+
     const meal = await this.prisma.$transaction(async (tx) => {
       const categoryRow = await tx.mealCategory.upsert({ where: { name: category }, create: { name: category }, update: {} });
-      const created = await tx.meal.create({ data: { userId, name: dto.name, score: dto.score, categoryId: categoryRow.id, link: dto.link, image: dto.image, prepTime: dto.prepTime, cookTime: dto.cookTime, servings: dto.servings, aiCategorized: !dto.category, aiNutrition: !dto.nutritionalValue?.calories }, include: this.defaultInclude });
+      const created = await tx.meal.create({
+        data: {
+          userId,
+          name: dto.name,
+          score: dto.score,
+          categoryId: categoryRow.id,
+          link: dto.link,
+          image: dto.image,
+          prepTime: dto.prepTime,
+          cookTime: dto.cookTime,
+          servings: dto.servings,
+          aiCategorized: !hasCategory,
+          aiNutrition: !hasNutrition,
+        },
+        include: this.defaultInclude,
+      });
       await tx.nutrition.create({ data: { mealId: created.id, ...nutrition } });
       for (const t of dto.types) await tx.mealTypeOnMeal.create({ data: { mealId: created.id, type: this.toMealType(t) } });
       for (const [index, step] of dto.steps.entries()) await tx.mealStep.create({ data: { mealId: created.id, orderNo: index + 1, text: step } });
@@ -35,7 +70,7 @@ export class MealsService {
         const ingredient = await tx.ingredient.upsert({ where: { name: ing.name }, create: { name: ing.name }, update: {} });
         await tx.mealIngredient.create({ data: { mealId: created.id, ingredientId: ingredient.id, amount: ing.amount, unit: ing.unit } });
       }
-      for (const tag of dto.tags ?? []) {
+      for (const tag of finalTags) {
         const tagRow = await tx.mealTag.upsert({ where: { name: tag }, create: { name: tag }, update: {} });
         await tx.mealTagOnMeal.create({ data: { mealId: created.id, tagId: tagRow.id } });
       }
@@ -43,6 +78,14 @@ export class MealsService {
     });
 
     return this.toFrontendMeal(meal);
+  }
+
+  async aiCategorize(name: string, ingredients: string[]) {
+    return this.ai.classifyMeal(name, ingredients);
+  }
+
+  async aiNutrition(name: string, ingredients: Array<{ name: string; amount: string; unit: string }>) {
+    return this.ai.estimateNutrition(name, ingredients);
   }
 
   async update(userId: string, id: string, dto: UpdateMealDto) {

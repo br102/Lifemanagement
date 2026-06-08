@@ -5,6 +5,11 @@ interface AppContextType {
   meals: Meal[];
   weekPlans: WeekPlan[];
   groceryLists: GroceryList[];
+  isAuthenticated: boolean;
+  authLoading: boolean;
+  currentUserName: string | null;
+  login: (username: string, password: string, remember: boolean) => Promise<void>;
+  logout: () => void;
   addMeal: (meal: Omit<Meal, 'id' | 'createdAt'>) => Promise<Meal>;
   updateMeal: (meal: Meal) => Promise<void>;
   deleteMeal: (id: string) => Promise<void>;
@@ -15,7 +20,14 @@ interface AppContextType {
   getGroceryList: (weekStartDate: string) => GroceryList | undefined;
   saveGroceryList: (list: GroceryList) => void;
   toggleGroceryItem: (listId: string, itemId: string) => Promise<void>;
-  aiCategorize: (name: string, ingredients: string[]) => Promise<{ category: string; types: MealType[] }>;
+  aiCategorize: (name: string, ingredients: string[]) => Promise<{
+    category: string;
+    primaryCategory: string;
+    categories: string[];
+    types: MealType[];
+    vegetarian: boolean;
+    lactoseFree: boolean;
+  }>;
   aiCalculateNutrition: (name: string, ingredients: Ingredient[]) => Promise<NutritionalValue>;
   aiGenerateMealPlan: (weekStartDate: string, veggiePrefs?: Set<string>) => Promise<WeekPlan>;
   aiGenerateGroceryList: (weekStartDate: string) => Promise<GroceryList>;
@@ -24,32 +36,55 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
-const DEMO_EMAIL = 'demo@lifemanagement.local';
-const DEMO_PASSWORD = 'DemoPass123!';
+const SINGLE_USER_NAME = (import.meta as any).env?.VITE_SINGLE_USER_NAME || 'Borja';
+const SINGLE_USER_EMAIL = (import.meta as any).env?.VITE_SINGLE_USER_EMAIL || 'borja@lifemanagement.local';
+const ACCESS_TOKEN_KEY = 'lm_access_token';
+const REFRESH_TOKEN_KEY = 'lm_refresh_token';
+const USERNAME_KEY = 'lm_username';
 
-const categoryKeywords: Record<string, string[]> = {
-  Italian: ['pasta', 'pizza', 'risotto', 'carbonara', 'arrabiata', 'pesto', 'tiramisu', 'lasagna'],
-  Mediterranean: ['salad', 'hummus', 'falafel', 'greek', 'quinoa', 'olive', 'yogurt', 'tzatziki'],
-  Asian: ['stir', 'fry', 'rice', 'noodle', 'sushi', 'wok', 'teriyaki', 'ramen', 'curry', 'tofu', 'sesame'],
-  Mexican: ['taco', 'burrito', 'quesadilla', 'guacamole', 'salsa', 'enchilada', 'cilantro', 'pastor'],
-  American: ['burger', 'sandwich', 'pancake', 'waffle', 'bbq', 'muffin', 'french toast', 'maple'],
-  Healthy: ['bowl', 'smoothie', 'avocado', 'salmon', 'kale', 'spinach', 'detox', 'superfood', 'grain'],
-};
+function getStoredValue(key: string): string | null {
+  return localStorage.getItem(key) ?? sessionStorage.getItem(key);
+}
 
-const typeKeywords: Record<MealType, string[]> = {
-  Breakfast: ['pancake', 'waffle', 'omelette', 'egg', 'toast', 'yogurt', 'smoothie', 'bowl', 'muffin', 'granola', 'porridge', 'cereal', 'french toast'],
-  Lunch: ['salad', 'sandwich', 'soup', 'wrap', 'panini', 'caesar', 'minestrone'],
-  Dinner: ['pasta', 'steak', 'chicken', 'fish', 'salmon', 'rice', 'taco', 'stir fry', 'curry', 'roast', 'burger', 'pizza'],
-  Snack: ['yogurt', 'fruit', 'nuts', 'energy', 'smoothie', 'bowl', 'toast', 'avocado'],
-  'Protein Shake': ['shake', 'protein', 'whey', 'casein', 'pea protein', 'plant protein', 'post-workout', 'recovery shake'],
-};
+function setStoredValue(key: string, value: string, remember: boolean) {
+  if (remember) {
+    localStorage.setItem(key, value);
+    sessionStorage.removeItem(key);
+  } else {
+    sessionStorage.setItem(key, value);
+    localStorage.removeItem(key);
+  }
+}
+
+function clearStoredValue(key: string) {
+  localStorage.removeItem(key);
+  sessionStorage.removeItem(key);
+}
+
+async function refreshAuth(): Promise<boolean> {
+  const refreshToken = getStoredValue(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return false;
+
+  const remember = localStorage.getItem(REFRESH_TOKEN_KEY) !== null;
+  const res = await fetch(`${API_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${refreshToken}`,
+    },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!res.ok) return false;
+  const data = await res.json();
+  setStoredValue(ACCESS_TOKEN_KEY, data.accessToken, remember);
+  setStoredValue(REFRESH_TOKEN_KEY, data.refreshToken, remember);
+  return true;
+}
 
 async function authFetch(path: string, init: RequestInit = {}) {
-  let accessToken = localStorage.getItem('lm_access_token');
-  if (!accessToken) {
-    await bootstrapAuth();
-    accessToken = localStorage.getItem('lm_access_token');
-  }
+  const accessToken = getStoredValue(ACCESS_TOKEN_KEY);
+  if (!accessToken) throw new Error('Not authenticated');
 
   const doFetch = async (token?: string) => fetch(`${API_URL}${path}`, {
     ...init,
@@ -60,11 +95,11 @@ async function authFetch(path: string, init: RequestInit = {}) {
     },
   });
 
-  let response = await doFetch(accessToken || undefined);
+  let response = await doFetch(accessToken);
   if (response.status === 401) {
     const refreshed = await refreshAuth();
     if (refreshed) {
-      response = await doFetch(localStorage.getItem('lm_access_token') || undefined);
+      response = await doFetch(getStoredValue(ACCESS_TOKEN_KEY) || undefined);
     }
   }
 
@@ -77,54 +112,13 @@ async function authFetch(path: string, init: RequestInit = {}) {
   return response.json();
 }
 
-async function bootstrapAuth() {
-  const loginRes = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD }),
-  });
-
-  let data: any;
-  if (loginRes.ok) {
-    data = await loginRes.json();
-  } else {
-    const registerRes = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: DEMO_EMAIL, password: DEMO_PASSWORD }),
-    });
-    if (!registerRes.ok) throw new Error('Unable to bootstrap auth');
-    data = await registerRes.json();
-  }
-
-  localStorage.setItem('lm_access_token', data.accessToken);
-  localStorage.setItem('lm_refresh_token', data.refreshToken);
-}
-
-async function refreshAuth() {
-  const refreshToken = localStorage.getItem('lm_refresh_token');
-  if (!refreshToken) return false;
-
-  const res = await fetch(`${API_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${refreshToken}`,
-    },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  if (!res.ok) return false;
-  const data = await res.json();
-  localStorage.setItem('lm_access_token', data.accessToken);
-  localStorage.setItem('lm_refresh_token', data.refreshToken);
-  return true;
-}
-
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [weekPlans, setWeekPlans] = useState<WeekPlan[]>([]);
   const [groceryLists, setGroceryLists] = useState<GroceryList[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
   const getWeekPlan = useCallback((weekStartDate: string) => weekPlans.find((p) => p.startDate === weekStartDate), [weekPlans]);
   const getGroceryList = useCallback((weekStartDate: string) => groceryLists.find((l) => l.weekStartDate === weekStartDate), [groceryLists]);
@@ -156,35 +150,91 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (list) saveGroceryList(list);
   }, [saveGroceryList]);
 
+  const loadInitialData = useCallback(async () => {
+    const mealsRes = await authFetch('/meals');
+    setMeals(mealsRes || []);
+
+    const today = new Date();
+    const monday = new Date(today);
+    const day = monday.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    monday.setDate(monday.getDate() + diff);
+
+    const weekStarts: string[] = [];
+    for (let index = -2; index <= 2; index++) {
+      const week = new Date(monday);
+      week.setDate(week.getDate() + index * 7);
+      weekStarts.push(week.toISOString().slice(0, 10));
+    }
+
+    for (const weekStart of weekStarts) {
+      await loadWeekPlan(weekStart);
+      await loadGrocery(weekStart);
+    }
+  }, [loadWeekPlan, loadGrocery]);
+
   useEffect(() => {
     (async () => {
+      const token = getStoredValue(ACCESS_TOKEN_KEY);
+      const rememberedUser = getStoredValue(USERNAME_KEY);
+      if (!token) {
+        setAuthLoading(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setCurrentUserName(rememberedUser || SINGLE_USER_NAME);
+
       try {
-        await bootstrapAuth();
-        const mealsRes = await authFetch('/meals');
-        setMeals(mealsRes || []);
-
-        const today = new Date();
-        const monday = new Date(today);
-        const d = monday.getDay();
-        const diff = d === 0 ? -6 : 1 - d;
-        monday.setDate(monday.getDate() + diff);
-
-        const weekStarts: string[] = [];
-        for (let i = -2; i <= 2; i++) {
-          const w = new Date(monday);
-          w.setDate(w.getDate() + i * 7);
-          weekStarts.push(w.toISOString().slice(0, 10));
-        }
-
-        for (const ws of weekStarts) {
-          await loadWeekPlan(ws);
-          await loadGrocery(ws);
-        }
-      } catch (e) {
-        console.error(e);
+        await loadInitialData();
+      } catch (error) {
+        console.error(error);
+        clearStoredValue(ACCESS_TOKEN_KEY);
+        clearStoredValue(REFRESH_TOKEN_KEY);
+        clearStoredValue(USERNAME_KEY);
+        setIsAuthenticated(false);
+        setCurrentUserName(null);
+      } finally {
+        setAuthLoading(false);
       }
     })();
-  }, [loadWeekPlan, loadGrocery]);
+  }, [loadInitialData]);
+
+  const login = useCallback(async (username: string, password: string, remember: boolean) => {
+    if (username !== SINGLE_USER_NAME) {
+      throw new Error('Invalid user');
+    }
+
+    const loginRes = await fetch(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: SINGLE_USER_EMAIL, password }),
+    });
+
+    if (!loginRes.ok) {
+      throw new Error('Invalid credentials');
+    }
+    const data = await loginRes.json();
+
+    setStoredValue(ACCESS_TOKEN_KEY, data.accessToken, remember);
+    setStoredValue(REFRESH_TOKEN_KEY, data.refreshToken, remember);
+    setStoredValue(USERNAME_KEY, username, remember);
+
+    setIsAuthenticated(true);
+    setCurrentUserName(username);
+    await loadInitialData();
+  }, [loadInitialData]);
+
+  const logout = useCallback(() => {
+    clearStoredValue(ACCESS_TOKEN_KEY);
+    clearStoredValue(REFRESH_TOKEN_KEY);
+    clearStoredValue(USERNAME_KEY);
+    setMeals([]);
+    setWeekPlans([]);
+    setGroceryLists([]);
+    setIsAuthenticated(false);
+    setCurrentUserName(null);
+  }, []);
 
   const addMeal = useCallback(async (mealData: Omit<Meal, 'id' | 'createdAt'>) => {
     const created = await authFetch('/meals', { method: 'POST', body: JSON.stringify(mealData) });
@@ -225,26 +275,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveGroceryList(updated as GroceryList);
   }, [groceryLists, saveGroceryList]);
 
-  const aiCategorize = useCallback(async (name: string): Promise<{ category: string; types: MealType[] }> => {
-    const lower = name.toLowerCase();
-    let category = 'Healthy';
-    for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-      if (keywords.some((k) => lower.includes(k))) {
-        category = cat;
-        break;
-      }
-    }
-
-    const types: MealType[] = [];
-    for (const [type, keywords] of Object.entries(typeKeywords)) {
-      if (keywords.some((k) => lower.includes(k))) types.push(type as MealType);
-    }
-    if (types.length === 0) types.push('Dinner');
-    return { category, types };
+  const aiCategorize = useCallback(async (name: string, ingredients: string[]) => {
+    const result = await authFetch('/meals/ai/categorize', {
+      method: 'POST',
+      body: JSON.stringify({ name, ingredients }),
+    });
+    return result as {
+      category: string;
+      primaryCategory: string;
+      categories: string[];
+      types: MealType[];
+      vegetarian: boolean;
+      lactoseFree: boolean;
+    };
   }, []);
 
-  const aiCalculateNutrition = useCallback(async (): Promise<NutritionalValue> => {
-    return { calories: 350, protein: 24, carbs: 32, fat: 11, fiber: 5, sugar: 8, sodium: 320 };
+  const aiCalculateNutrition = useCallback(async (name: string, ingredients: Ingredient[]): Promise<NutritionalValue> => {
+    const result = await authFetch('/meals/ai/nutrition', {
+      method: 'POST',
+      body: JSON.stringify({
+        name,
+        ingredients: ingredients.map((item) => ({ name: item.name, amount: item.amount, unit: item.unit })),
+      }),
+    });
+    return result as NutritionalValue;
   }, []);
 
   const aiGenerateMealPlan = useCallback(async (weekStartDate: string) => {
@@ -265,6 +319,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         meals,
         weekPlans,
         groceryLists,
+        isAuthenticated,
+        authLoading,
+        currentUserName,
+        login,
+        logout,
         addMeal,
         updateMeal,
         deleteMeal,
@@ -287,7 +346,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useApp() {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error('useApp must be used within AppProvider');
-  return ctx;
+  const context = useContext(AppContext);
+  if (!context) throw new Error('useApp must be used within AppProvider');
+  return context;
 }

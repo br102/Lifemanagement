@@ -21,6 +21,7 @@ const path_1 = require("path");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const create_meal_dto_1 = require("./dto/create-meal.dto");
 const update_meal_dto_1 = require("./dto/update-meal.dto");
+const ai_tools_dto_1 = require("./dto/ai-tools.dto");
 const meals_service_1 = require("./meals.service");
 let MealsController = class MealsController {
     constructor(mealsService) {
@@ -37,6 +38,12 @@ let MealsController = class MealsController {
     }
     create(user, dto) {
         return this.mealsService.create(user.userId, dto);
+    }
+    categorize(dto) {
+        return this.mealsService.aiCategorize(dto.name, dto.ingredients);
+    }
+    nutrition(dto) {
+        return this.mealsService.aiNutrition(dto.name, dto.ingredients);
     }
     update(user, id, dto) {
         return this.mealsService.update(user.userId, id, dto);
@@ -87,6 +94,20 @@ __decorate([
     __metadata("design:paramtypes", [Object, create_meal_dto_1.CreateMealDto]),
     __metadata("design:returntype", void 0)
 ], MealsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('ai/categorize'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [ai_tools_dto_1.AiCategorizeDto]),
+    __metadata("design:returntype", void 0)
+], MealsController.prototype, "categorize", null);
+__decorate([
+    (0, common_1.Post)('ai/nutrition'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [ai_tools_dto_1.AiNutritionDto]),
+    __metadata("design:returntype", void 0)
+], MealsController.prototype, "nutrition", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

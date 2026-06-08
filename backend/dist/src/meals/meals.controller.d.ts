@@ -1,5 +1,6 @@
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
+import { AiCategorizeDto, AiNutritionDto } from './dto/ai-tools.dto';
 import { MealsService } from './meals.service';
 export declare class MealsController {
     private readonly mealsService;
@@ -73,6 +74,8 @@ export declare class MealsController {
         createdAt: any;
         updatedAt: any;
     }>;
+    categorize(dto: AiCategorizeDto): Promise<import("../ai/ai-provider.interface").MealClassification>;
+    nutrition(dto: AiNutritionDto): Promise<import("../ai/ai-provider.interface").NutritionResult>;
     update(user: {
         userId: string;
     }, id: string, dto: UpdateMealDto): Promise<{

@@ -10,9 +10,24 @@ const app_module_1 = require("./app.module");
 const all_exceptions_filter_1 = require("./common/filters/all-exceptions.filter");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    const allowedOrigins = (process.env.FRONTEND_URL || '')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+    const localhostDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
     app.enableCors({
-        origin: process.env.FRONTEND_URL?.split(',') ?? ['http://localhost:5173'],
+        origin: (origin, callback) => {
+            if (!origin)
+                return callback(null, true);
+            if (allowedOrigins.includes(origin))
+                return callback(null, true);
+            if (localhostDevOrigin.test(origin))
+                return callback(null, true);
+            return callback(new Error(`CORS blocked origin: ${origin}`), false);
+        },
         credentials: true,
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
     });
     app.use((0, helmet_1.default)());
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));

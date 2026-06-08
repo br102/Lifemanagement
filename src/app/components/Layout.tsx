@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useLocation } from 'react-router';
-import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkles, Menu, X, Leaf, Moon, Sun } from 'lucide-react';
+import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkles, Menu, X, Leaf, Moon, Sun, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
+import { useApp } from '../context/AppContext';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: Home, end: true },
@@ -17,6 +18,7 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { isDark, toggle } = useTheme();
+  const { currentUserName, logout } = useApp();
 
   const pageTitles: Record<string, string> = {
     '/': 'Dashboard',
@@ -120,12 +122,19 @@ export function Layout() {
           {/* User info */}
           <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-amber-50 dark:bg-gray-800">
             <div className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-900 flex items-center justify-center text-amber-700 dark:text-amber-300" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
-              U
+              {(currentUserName?.slice(0, 1) || 'U').toUpperCase()}
             </div>
             <div>
-              <p style={{ fontSize: '0.8rem', fontWeight: 600 }} className="text-gray-800 dark:text-gray-200">User</p>
+              <p style={{ fontSize: '0.8rem', fontWeight: 600 }} className="text-gray-800 dark:text-gray-200">{currentUserName || 'User'}</p>
               <p style={{ fontSize: '0.7rem' }} className="text-gray-400 dark:text-gray-500">Health & Wellness</p>
             </div>
+            <button
+              onClick={logout}
+              className="ml-auto p-2 rounded-lg text-gray-500 hover:bg-white/70 dark:hover:bg-gray-700"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>

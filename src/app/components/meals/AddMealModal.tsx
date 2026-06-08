@@ -72,13 +72,14 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
   const watchedScore = watch('score');
   const watchedName = watch('name');
   const watchedImage = watch('image');
+  const watchedTags = watch('tags');
 
   const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
 
   const handleImageFile = async (file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) return;
-    const token = localStorage.getItem('lm_access_token');
+    const token = localStorage.getItem('lm_access_token') ?? sessionStorage.getItem('lm_access_token');
     const formData = new FormData();
     formData.append('file', file);
 
@@ -106,8 +107,18 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
     try {
       const ingredients = ingFields.map(f => (f as any).name || '').filter(Boolean);
       const result = await aiCategorize(watchedName, ingredients);
-      setValue('category', result.category);
+      setValue('category', result.primaryCategory || result.category);
       setValue('types', result.types);
+      const dietaryTags = [
+        result.vegetarian ? 'vegetarian' : 'non-vegetarian',
+        result.lactoseFree ? 'lactose-free' : 'contains-lactose',
+      ];
+      const currentTags = (watchedTags || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const nextTags = Array.from(new Set([...currentTags, ...(result.categories || []), ...dietaryTags]));
+      setValue('tags', nextTags.join(', '));
     } finally {
       setAiLoading(null);
     }
@@ -135,7 +146,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
     }
   };
 
-  const onSubmit = (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => {
     const nutritionalValue: NutritionalValue = {
       calories: Number(data.calories), protein: Number(data.protein),
       carbs: Number(data.carbs), fat: Number(data.fat),
@@ -154,10 +165,15 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
       nutritionalValue,
       aiNutrition: false,
     };
-    if (meal) updateMeal({ ...meal, ...mealData });
-    else addMeal(mealData);
-    onSaved();
-    onClose();
+    try {
+      if (meal) await updateMeal({ ...meal, ...mealData });
+      else await addMeal(mealData);
+      onSaved();
+      onClose();
+    } catch (error) {
+      console.error('Failed to save meal', error);
+      window.alert('Could not save the recipe. Check backend logs and try again.');
+    }
   };
 
   const tabs = [
@@ -254,7 +270,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                       AI Fill
                     </button>
                   </div>
-                  <input {...register('category')} placeholder="e.g. Mediterranean, Italian..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <input {...register('category')} placeholder="e.g. Spanish, Italian, Mexican..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
@@ -272,7 +288,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Tags (comma separated)</label>
-                  <input {...register('tags')} placeholder="e.g. quick, vegan, spicy" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <input {...register('tags')} placeholder="e.g. vegetarian, lactose-free, high-protein" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Recipe Link</label>
