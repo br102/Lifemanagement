@@ -15,13 +15,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.MealsController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
+const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
+const path_1 = require("path");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const create_meal_dto_1 = require("./dto/create-meal.dto");
 const update_meal_dto_1 = require("./dto/update-meal.dto");
+const ai_tools_dto_1 = require("./dto/ai-tools.dto");
 const meals_service_1 = require("./meals.service");
 let MealsController = class MealsController {
     constructor(mealsService) {
         this.mealsService = mealsService;
+    }
+    uploadImage(file) {
+        return { imageUrl: `/uploads/${file.filename}` };
     }
     findAll(user, search, type) {
         return this.mealsService.findAll(user.userId, search, type);
@@ -32,6 +39,12 @@ let MealsController = class MealsController {
     create(user, dto) {
         return this.mealsService.create(user.userId, dto);
     }
+    categorize(dto) {
+        return this.mealsService.aiCategorize(dto.name, dto.ingredients);
+    }
+    nutrition(dto) {
+        return this.mealsService.aiNutrition(dto.name, dto.ingredients);
+    }
     update(user, id, dto) {
         return this.mealsService.update(user.userId, id, dto);
     }
@@ -40,6 +53,22 @@ let MealsController = class MealsController {
     }
 };
 exports.MealsController = MealsController;
+__decorate([
+    (0, common_1.Post)('upload-image'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        storage: (0, multer_1.diskStorage)({
+            destination: 'uploads',
+            filename: (_req, file, cb) => {
+                const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+                cb(null, `${unique}${(0, path_1.extname)(file.originalname)}`);
+            },
+        }),
+    })),
+    __param(0, (0, common_1.UploadedFile)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], MealsController.prototype, "uploadImage", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
@@ -65,6 +94,20 @@ __decorate([
     __metadata("design:paramtypes", [Object, create_meal_dto_1.CreateMealDto]),
     __metadata("design:returntype", void 0)
 ], MealsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Post)('ai/categorize'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [ai_tools_dto_1.AiCategorizeDto]),
+    __metadata("design:returntype", void 0)
+], MealsController.prototype, "categorize", null);
+__decorate([
+    (0, common_1.Post)('ai/nutrition'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [ai_tools_dto_1.AiNutritionDto]),
+    __metadata("design:returntype", void 0)
+], MealsController.prototype, "nutrition", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

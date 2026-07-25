@@ -46,6 +46,12 @@ export declare class MealsService {
         createdAt: any;
         updatedAt: any;
     }>;
+    aiCategorize(name: string, ingredients: string[]): Promise<import("../ai/ai-provider.interface").MealClassification>;
+    aiNutrition(name: string, ingredients: Array<{
+        name: string;
+        amount: string;
+        unit: string;
+    }>): Promise<import("../ai/ai-provider.interface").NutritionResult>;
     update(userId: string, id: string, dto: UpdateMealDto): Promise<{
         id: any;
         name: any;

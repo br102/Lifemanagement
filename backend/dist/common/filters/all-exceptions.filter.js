@@ -13,7 +13,16 @@ let AllExceptionsFilter = class AllExceptionsFilter {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse();
         const status = exception instanceof common_1.HttpException ? exception.getStatus() : common_1.HttpStatus.INTERNAL_SERVER_ERROR;
-        const message = exception instanceof common_1.HttpException ? exception.getResponse() : 'Internal server error';
+        const isDev = (process.env.NODE_ENV || 'development') !== 'production';
+        const message = exception instanceof common_1.HttpException
+            ? exception.getResponse()
+            : (exception instanceof Error ? exception.message : 'Internal server error');
+        if (exception instanceof Error) {
+            console.error('[API ERROR]', exception.message, exception.stack);
+        }
+        else {
+            console.error('[API ERROR]', exception);
+        }
         response.status(status).json({
             success: false,
             error: message,
