@@ -2,6 +2,9 @@
   "name": "life-management-backend",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "build": "nest build",
     "start": "node dist/main",
@@ -40,7 +43,7 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",
     "@types/multer": "^2.2.0",
-    "@types/node": "^20.16.5",
+    "@types/node": "^22.16.5",
     "@types/passport-jwt": "^3.0.13",
     "eslint": "^9.10.0",
     "jest": "^29.7.0",
