@@ -1,34 +1,35 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseFilters, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { MulterExceptionFilter } from '../common/filters/multer-exception.filter';
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
 import { AiCategorizeDto, AiNutritionDto } from './dto/ai-tools.dto';
 import { MealsService } from './meals.service';
+import { SupabaseImageStorageService } from '../storage/supabase-image-storage.service';
 
 @ApiTags('meals')
 @ApiBearerAuth()
 @Controller('meals')
 export class MealsController {
-  constructor(private readonly mealsService: MealsService) {}
+  constructor(
+    private readonly mealsService: MealsService,
+    private readonly imageStorage: SupabaseImageStorageService,
+  ) {}
 
   @Post('upload-image')
+  @UseFilters(MulterExceptionFilter)
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: 'uploads',
-        filename: (_req: any, file: any, cb: any) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
     }),
   )
-  uploadImage(@UploadedFile() file: any) {
-    return { imageUrl: `/uploads/${file.filename}` };
+  async uploadImage(@UploadedFile() file: UploadedImageFile) {
+    const { publicUrl } = await this.imageStorage.uploadMealImage(file);
+    return { imageUrl: publicUrl };
   }
 
   @Get()
@@ -66,3 +67,9 @@ export class MealsController {
     return this.mealsService.remove(user.userId, id);
   }
 }
+
+type UploadedImageFile = {
+  mimetype: string;
+  originalname: string;
+  buffer: Buffer;
+};

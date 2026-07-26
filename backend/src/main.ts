@@ -28,6 +28,7 @@ async function bootstrap() {
   app.use(helmet());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalFilters(new AllExceptionsFilter());
+  // Legacy compatibility only: older Railway-hosted URLs may still point here.
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   const config = new DocumentBuilder()

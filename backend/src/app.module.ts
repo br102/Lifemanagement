@@ -7,6 +7,7 @@ import { MealsModule } from './meals/meals.module';
 import { MealPlannerModule } from './meal-planner/meal-planner.module';
 import { GroceriesModule } from './groceries/groceries.module';
 import { AiModule } from './ai/ai.module';
+import { StorageModule } from './storage/storage.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RateLimitMiddleware } from './common/rate-limit/rate-limit.middleware';
 import { RequestLoggerMiddleware } from './common/logger/request-logger.middleware';
@@ -17,6 +18,7 @@ import { RequestLoggerMiddleware } from './common/logger/request-logger.middlewa
     DatabaseModule,
     AuthModule,
     AiModule,
+    StorageModule,
     MealsModule,
     MealPlannerModule,
     GroceriesModule,

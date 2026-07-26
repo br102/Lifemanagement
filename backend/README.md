@@ -32,6 +32,20 @@
 
 ## Security and production controls
 - JWT access + refresh token flow
+
+## Supabase image storage
+
+Meal image uploads now use Supabase Storage instead of Railway's local filesystem.
+
+Required backend variables:
+
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_IMAGES_BUCKET=images
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` is server-only. Never expose it to the frontend, a `VITE_` variable, or Cloudflare Pages.
 - Helmet + CORS
 - ValidationPipe with whitelist
 - Global exception filter
