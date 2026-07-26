@@ -3,33 +3,79 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as express from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import { join } from 'path';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
   const allowedOrigins = (process.env.FRONTEND_URL || '')
     .split(',')
-    .map((o) => o.trim())
+    .map((origin) => origin.trim())
     .filter(Boolean);
-  const localhostDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
+  const localhostDevOrigin =
+    /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      if (localhostDevOrigin.test(origin)) return callback(null, true);
-      return callback(new Error(`CORS blocked origin: ${origin}`), false);
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      if (localhostDevOrigin.test(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(
+        new Error(`CORS blocked origin: ${origin}`),
+        false,
+      );
     },
     credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    methods: [
+      'GET',
+      'HEAD',
+      'PUT',
+      'PATCH',
+      'POST',
+      'DELETE',
+      'OPTIONS',
+    ],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
+
+  // Apply Helmet's security headers to the application.
   app.use(helmet());
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
+
   app.useGlobalFilters(new AllExceptionsFilter());
-  // Legacy compatibility only: older Railway-hosted URLs may still point here.
-  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
+
+  // Serve uploaded images publicly and allow them to be displayed
+  // by the frontend hosted on a different origin.
+  app.use(
+    '/uploads',
+    (_req: Request, res: Response, next: NextFunction) => {
+      res.setHeader(
+        'Cross-Origin-Resource-Policy',
+        'cross-origin',
+      );
+      next();
+    },
+    express.static(join(process.cwd(), 'uploads')),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('Life Management API')
@@ -39,9 +85,13 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(Number(process.env.PORT || 4000), '0.0.0.0');
+  await app.listen(
+    Number(process.env.PORT || 4000),
+    '0.0.0.0',
+  );
 }
 
 bootstrap();
