@@ -41,8 +41,9 @@ interface Props {
 }
 
 export function AddMealModal({ meal, onClose, onSaved }: Props) {
-  const { addMeal, updateMeal, aiCategorize, aiCalculateNutrition } = useApp();
+  const { addMeal, updateMeal, aiCategorize, aiCalculateNutrition, aiDraftMealFromLink } = useApp();
   const [aiLoading, setAiLoading] = useState<'category' | 'nutrition' | null>(null);
+  const [aiDraftLoading, setAiDraftLoading] = useState(false);
   const [hoverStar, setHoverStar] = useState(0);
   const [activeTab, setActiveTab] = useState<'basic' | 'details' | 'nutrition'>('basic');
 
@@ -176,6 +177,38 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
     }
   };
 
+  const handleAiDraftFromLink = async () => {
+    const link = (watch('link') || '').trim();
+    if (!link) return;
+    setAiDraftLoading(true);
+    try {
+      const draft = await aiDraftMealFromLink(link);
+      if (draft.name) setValue('name', draft.name);
+      if (draft.category) setValue('category', draft.category);
+      if (draft.types?.length) setValue('types', draft.types as MealType[]);
+      if (draft.score) setValue('score', Math.min(5, Math.max(1, Math.round(draft.score))));
+      if (draft.ingredients?.length) setValue('ingredients', draft.ingredients);
+      if (draft.steps?.length) setValue('steps', draft.steps.map((text) => ({ text })));
+      if (draft.nutritionalValue) {
+        setValue('calories', draft.nutritionalValue.calories);
+        setValue('protein', draft.nutritionalValue.protein);
+        setValue('carbs', draft.nutritionalValue.carbs);
+        setValue('fat', draft.nutritionalValue.fat);
+        setValue('fiber', draft.nutritionalValue.fiber);
+        setValue('sugar', draft.nutritionalValue.sugar);
+        setValue('sodium', draft.nutritionalValue.sodium);
+      }
+      if (draft.image) setValue('image', draft.image);
+      if (draft.prepTime !== undefined) setValue('prepTime', draft.prepTime);
+      if (draft.cookTime !== undefined) setValue('cookTime', draft.cookTime);
+      if (draft.servings !== undefined) setValue('servings', draft.servings);
+      if (draft.tags?.length) setValue('tags', draft.tags.join(', '));
+      setActiveTab('basic');
+    } finally {
+      setAiDraftLoading(false);
+    }
+  };
+
   const tabs = [
     { id: 'basic', label: 'Basic Info' },
     { id: 'details', label: 'Ingredients & Steps' },
@@ -298,9 +331,19 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Recipe Link</label>
-                  <div className="relative">
+                  <div className="relative flex gap-2">
+                    <div className="relative flex-1">
                     <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
                     <input {...register('link')} placeholder="https://..." className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAiDraftFromLink}
+                      disabled={!watchedName && !(watch('link') || '').trim() || aiDraftLoading}
+                      className="px-3 py-2.5 rounded-xl bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {aiDraftLoading ? 'Filling...' : 'Fill with AI'}
+                    </button>
                   </div>
                 </div>
               </>

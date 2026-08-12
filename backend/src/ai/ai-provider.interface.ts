@@ -29,9 +29,25 @@ export interface GrocerySuggestion {
   estimatedExpirationDate?: string;
 }
 
+export interface MealDraftSuggestion {
+  name?: string;
+  category?: string;
+  types?: string[];
+  score?: number;
+  ingredients?: Array<{ name: string; amount: string; unit: string }>;
+  steps?: string[];
+  nutritionalValue?: NutritionResult;
+  image?: string;
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  tags?: string[];
+}
+
 export interface AiProvider {
   classifyMeal(name: string, ingredients: string[]): Promise<MealClassification>;
   estimateNutrition(name: string, ingredients: Array<{ name: string; amount: string; unit: string }>): Promise<NutritionResult>;
+  draftMealFromLink(link: string): Promise<MealDraftSuggestion>;
   generateWeekPlan(input: PlannerInput): Promise<Record<string, Partial<Record<'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', string>>>>;
   suggestGroceryMeta(items: Array<{ name: string; category: string }>): Promise<GrocerySuggestion[]>;
 }

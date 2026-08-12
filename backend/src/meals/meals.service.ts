@@ -3,7 +3,7 @@ import { Prisma, MealType } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
-import { AiProvider } from '../ai/ai-provider.interface';
+import { AiProvider, MealDraftSuggestion } from '../ai/ai-provider.interface';
 
 @Injectable()
 export class MealsService {
@@ -86,6 +86,10 @@ export class MealsService {
 
   async aiNutrition(name: string, ingredients: Array<{ name: string; amount: string; unit: string }>) {
     return this.ai.estimateNutrition(name, ingredients);
+  }
+
+  async aiDraftFromLink(link: string): Promise<MealDraftSuggestion> {
+    return this.ai.draftMealFromLink(link);
   }
 
   async update(userId: string, id: string, dto: UpdateMealDto) {

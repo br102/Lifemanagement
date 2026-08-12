@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AiProvider, GrocerySuggestion, MealClassification, NutritionResult, PlannerInput } from './ai-provider.interface';
+import { AiProvider, GrocerySuggestion, MealClassification, MealDraftSuggestion, NutritionResult, PlannerInput } from './ai-provider.interface';
 
 @Injectable()
 export class OpenAiProvider implements AiProvider {
@@ -65,6 +65,80 @@ Ingredients: ${JSON.stringify(ingredients)}`;
       fiber: this.requiredInt(json, 'fiber'),
       sugar: this.requiredInt(json, 'sugar'),
       sodium: this.requiredInt(json, 'sodium'),
+    };
+  }
+
+  async draftMealFromLink(link: string): Promise<MealDraftSuggestion> {
+    // eslint-disable-next-line no-console
+    console.log('[AI][OpenAI] draftMealFromLink called', { link });
+    const prompt = `Use this recipe link as the only input and return a best-effort meal draft.
+Do not scrape the website. Do not browse. Infer from the URL, path, slug, filename, and any obvious cues only.
+If you cannot infer a value, use null or an empty array.
+Return strict JSON only with this shape:
+{
+  "name": string | null,
+  "category": string | null,
+  "types": string[],
+  "score": number | null,
+  "ingredients": [{"name": string, "amount": string, "unit": string}],
+  "steps": [string],
+  "nutritionalValue": {"calories": number,"protein": number,"carbs": number,"fat": number,"fiber": number,"sugar": number,"sodium": number} | null,
+  "image": string | null,
+  "prepTime": number | null,
+  "cookTime": number | null,
+  "servings": number | null,
+  "tags": [string]
+}
+Rules:
+- Keep the output practical and ready to paste into a meal form.
+- Use 3 to 8 ingredients if possible.
+- Use 3 to 7 steps if possible.
+- score should be between 1 and 5 if inferred, otherwise null.
+- types should use only Breakfast, Lunch, Dinner, Snack, Protein Shake.
+Link: ${link}`;
+    const json = await this.askJson(prompt);
+    const types = Array.isArray(json?.types)
+      ? json.types.filter((value: unknown) => typeof value === 'string')
+      : [];
+    const ingredients = Array.isArray(json?.ingredients)
+      ? json.ingredients
+          .filter((value: unknown) => value && typeof value === 'object')
+          .map((item) => ({
+            name: this.optionalString(item, 'name') ?? '',
+            amount: this.optionalString(item, 'amount') ?? '',
+            unit: this.optionalString(item, 'unit') ?? '',
+          }))
+          .filter((item) => item.name.length > 0)
+      : [];
+    const steps = Array.isArray(json?.steps)
+      ? json.steps.map((step: unknown) => typeof step === 'string' ? step.trim() : '').filter(Boolean)
+      : [];
+    const nutritionalValue = json?.nutritionalValue
+      ? {
+          calories: this.requiredInt(json.nutritionalValue, 'calories'),
+          protein: this.requiredInt(json.nutritionalValue, 'protein'),
+          carbs: this.requiredInt(json.nutritionalValue, 'carbs'),
+          fat: this.requiredInt(json.nutritionalValue, 'fat'),
+          fiber: this.requiredInt(json.nutritionalValue, 'fiber'),
+          sugar: this.requiredInt(json.nutritionalValue, 'sugar'),
+          sodium: this.requiredInt(json.nutritionalValue, 'sodium'),
+        }
+      : undefined;
+    const scoreValue = json?.score == null ? undefined : Number(json.score);
+    const score = Number.isFinite(scoreValue) ? Math.min(5, Math.max(1, Math.round(scoreValue))) : undefined;
+    return {
+      name: this.optionalString(json, 'name'),
+      category: this.optionalString(json, 'category'),
+      types,
+      score,
+      ingredients,
+      steps,
+      nutritionalValue,
+      image: this.optionalString(json, 'image'),
+      prepTime: this.optionalString(json, 'prepTime') ? Number(this.optionalString(json, 'prepTime')) : undefined,
+      cookTime: this.optionalString(json, 'cookTime') ? Number(this.optionalString(json, 'cookTime')) : undefined,
+      servings: this.optionalString(json, 'servings') ? Number(this.optionalString(json, 'servings')) : undefined,
+      tags: Array.isArray(json?.tags) ? json.tags.filter((value: unknown) => typeof value === 'string') : [],
     };
   }
 

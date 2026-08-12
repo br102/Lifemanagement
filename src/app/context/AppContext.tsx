@@ -29,6 +29,20 @@ interface AppContextType {
     lactoseFree: boolean;
   }>;
   aiCalculateNutrition: (name: string, ingredients: Ingredient[]) => Promise<NutritionalValue>;
+  aiDraftMealFromLink: (link: string) => Promise<{
+    name?: string;
+    category?: string;
+    types?: string[];
+    score?: number;
+    ingredients?: Array<{ name: string; amount: string; unit: string }>;
+    steps?: string[];
+    nutritionalValue?: NutritionalValue;
+    image?: string;
+    prepTime?: number;
+    cookTime?: number;
+    servings?: number;
+    tags?: string[];
+  }>;
   aiGenerateMealPlan: (weekStartDate: string, veggiePrefs?: Set<string>) => Promise<WeekPlan>;
   aiGenerateGroceryList: (weekStartDate: string) => Promise<GroceryList>;
 }
@@ -301,6 +315,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return result as NutritionalValue;
   }, []);
 
+  const aiDraftMealFromLink = useCallback(async (link: string) => {
+    const result = await authFetch('/meals/ai/from-link', {
+      method: 'POST',
+      body: JSON.stringify({ link }),
+    });
+    return result as {
+      name?: string;
+      category?: string;
+      types?: string[];
+      score?: number;
+      ingredients?: Array<{ name: string; amount: string; unit: string }>;
+      steps?: string[];
+      nutritionalValue?: NutritionalValue;
+      image?: string;
+      prepTime?: number;
+      cookTime?: number;
+      servings?: number;
+      tags?: string[];
+    };
+  }, []);
+
   const aiGenerateMealPlan = useCallback(async (weekStartDate: string) => {
     const plan = await authFetch(`/planner/week/${weekStartDate}/ai-generate`, { method: 'POST' });
     saveWeekPlan(plan as WeekPlan);
@@ -336,6 +371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         toggleGroceryItem,
         aiCategorize,
         aiCalculateNutrition,
+        aiDraftMealFromLink,
         aiGenerateMealPlan,
         aiGenerateGroceryList,
       }}
