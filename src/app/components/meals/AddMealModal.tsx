@@ -91,7 +91,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
 
     if (!res.ok) return;
     const data = await res.json();
-    const imageUrl = `${API_URL}${data.imageUrl}`;
+    const imageUrl = data.imageUrl?.startsWith('http') ? data.imageUrl : `${API_URL}${data.imageUrl}`;
     setValue('image', imageUrl);
   };
 
@@ -182,15 +182,21 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
     { id: 'nutrition', label: 'Nutrition' },
   ] as const;
 
+  const requestClose = () => {
+    if (window.confirm('Are you sure you want to close this recipe form? Any unsaved changes will be lost.')) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={requestClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-gray-900" style={{ fontSize: '1.125rem', fontWeight: 700 }}>
             {meal ? 'Edit Meal' : 'Add New Meal'}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">
+          <button onClick={requestClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -383,7 +389,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
 
           {/* Footer */}
           <div className="px-6 pb-6 flex gap-3 flex-shrink-0">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm hover:bg-gray-50">
+            <button type="button" onClick={requestClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm hover:bg-gray-50">
               Cancel
             </button>
             <button type="submit" className="flex-1 py-2.5 bg-amber-400 rounded-xl text-white text-sm hover:bg-amber-500 transition-colors" style={{ fontWeight: 600 }}>
