@@ -190,22 +190,22 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={requestClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-transparent dark:border-gray-800" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
-          <h2 className="text-gray-900" style={{ fontSize: '1.125rem', fontWeight: 700 }}>
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+          <h2 className="text-gray-900 dark:text-gray-100" style={{ fontSize: '1.125rem', fontWeight: 700 }}>
             {meal ? 'Edit Meal' : 'Add New Meal'}
           </h2>
-          <button onClick={requestClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">
+          <button onClick={requestClose} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-100 px-6 flex-shrink-0">
+        <div className="flex border-b border-gray-100 dark:border-gray-800 px-6 flex-shrink-0">
           {tabs.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm border-b-2 transition-colors ${activeTab === tab.id ? 'border-amber-400 text-amber-600 font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+              className={`px-4 py-3 text-sm border-b-2 transition-colors ${activeTab === tab.id ? 'border-amber-400 text-amber-600 dark:text-amber-400 font-medium' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}>
               {tab.label}
             </button>
           ))}
@@ -218,22 +218,22 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
             {activeTab === 'basic' && (
               <>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Meal Name *</label>
-                  <input {...register('name', { required: true })} placeholder="e.g. Mediterranean Salad" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Meal Name *</label>
+                  <input {...register('name', { required: true })} placeholder="e.g. Mediterranean Salad" className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Image URL</label>
-                  <input {...register('image')} placeholder="https://..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Image URL</label>
+                  <input {...register('image')} placeholder="https://..." className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
                   <div
-                    className="mt-2 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/50 p-4 text-center"
+                    className="mt-2 rounded-xl border-2 border-dashed border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 p-4 text-center"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
                       e.preventDefault();
                       handleImageFile(e.dataTransfer.files?.[0]);
                     }}
                   >
-                    <p className="text-xs text-amber-700 mb-2">Drag & drop an image here</p>
-                    <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-amber-200 rounded-full text-xs text-amber-700 cursor-pointer hover:bg-amber-50">
+                    <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">Drag & drop an image here</p>
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-900/60 rounded-full text-xs text-amber-700 dark:text-amber-300 cursor-pointer hover:bg-amber-50 dark:hover:bg-gray-700">
                       Upload image
                       <input
                         type="file"
@@ -246,22 +246,22 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                   {watchedImage && <img src={watchedImage} alt="preview" className="mt-2 w-full h-32 object-cover rounded-xl" onError={e => e.currentTarget.style.display='none'} />}
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-2">Score</label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">Score</label>
                   <div className="flex gap-1">
                     {[1,2,3,4,5].map(s => (
                       <button key={s} type="button" onClick={() => setValue('score', s)} onMouseEnter={() => setHoverStar(s)} onMouseLeave={() => setHoverStar(0)}
                         className="p-1 transition-transform hover:scale-110">
-                        <Star className={`w-6 h-6 ${s <= (hoverStar || watchedScore) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}`} />
+                        <Star className={`w-6 h-6 ${s <= (hoverStar || watchedScore) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-gray-700 fill-gray-200 dark:fill-gray-700'}`} />
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-2">Meal Types</label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">Meal Types</label>
                   <div className="flex flex-wrap gap-2">
                     {MEAL_TYPES.map(type => (
                       <button key={type} type="button" onClick={() => toggleType(type)}
-                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${watchedTypes?.includes(type) ? TYPE_COLORS[type] : 'border-gray-200 text-gray-400 hover:border-gray-300'}`}>
+                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${watchedTypes?.includes(type) ? TYPE_COLORS[type] : 'border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'}`}>
                         {type}
                       </button>
                     ))}
@@ -269,38 +269,38 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-sm text-gray-600">Category</label>
+                    <label className="block text-sm text-gray-600 dark:text-gray-300">Category</label>
                     <button type="button" onClick={handleAiCategory} disabled={!watchedName || aiLoading === 'category'}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-violet-50 text-violet-600 rounded-full text-xs hover:bg-violet-100 disabled:opacity-50">
+                      className="flex items-center gap-1 px-2.5 py-1 bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-300 rounded-full text-xs hover:bg-violet-100 dark:hover:bg-violet-900/40 disabled:opacity-50">
                       {aiLoading === 'category' ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                       AI Fill
                     </button>
                   </div>
-                  <input {...register('category')} placeholder="e.g. Spanish, Italian, Mexican..." className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <input {...register('category')} placeholder="e.g. Spanish, Italian, Mexican..." className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Prep (min)</label>
-                    <input type="number" {...register('prepTime')} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                    <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Prep (min)</label>
+                    <input type="number" {...register('prepTime')} className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Cook (min)</label>
-                    <input type="number" {...register('cookTime')} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                    <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Cook (min)</label>
+                    <input type="number" {...register('cookTime')} className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Servings</label>
-                    <input type="number" {...register('servings')} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                    <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Servings</label>
+                    <input type="number" {...register('servings')} className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Tags (comma separated)</label>
-                  <input {...register('tags')} placeholder="e.g. vegetarian, lactose-free, high-protein" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Tags (comma separated)</label>
+                  <input {...register('tags')} placeholder="e.g. vegetarian, lactose-free, high-protein" className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Recipe Link</label>
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Recipe Link</label>
                   <div className="relative">
-                    <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input {...register('link')} placeholder="https://..." className="w-full pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
+                    <ExternalLink className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <input {...register('link')} placeholder="https://..." className="w-full pl-9 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
                   </div>
                 </div>
               </>
@@ -311,19 +311,19 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
               <>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm text-gray-600">Ingredients</label>
+                    <label className="block text-sm text-gray-600 dark:text-gray-300">Ingredients</label>
                     <button type="button" onClick={() => addIng({ name: '', amount: '', unit: '' })}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-xs hover:bg-amber-100">
+                      className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300 rounded-full text-xs hover:bg-amber-100 dark:hover:bg-amber-900/40">
                       <Plus className="w-3 h-3" /> Add
                     </button>
                   </div>
                   <div className="space-y-2">
                     {ingFields.map((field, i) => (
                       <div key={field.id} className="flex gap-2">
-                        <input {...register(`ingredients.${i}.name`)} placeholder="Ingredient" className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
-                        <input {...register(`ingredients.${i}.amount`)} placeholder="Amt" className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
-                        <input {...register(`ingredients.${i}.unit`)} placeholder="Unit" className="w-20 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 bg-gray-50" />
-                        <button type="button" onClick={() => removeIng(i)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                        <input {...register(`ingredients.${i}.name`)} placeholder="Ingredient" className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
+                        <input {...register(`ingredients.${i}.amount`)} placeholder="Amt" className="w-16 px-2 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
+                        <input {...register(`ingredients.${i}.unit`)} placeholder="Unit" className="w-20 px-2 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
+                        <button type="button" onClick={() => removeIng(i)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -332,18 +332,18 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm text-gray-600">Steps</label>
+                    <label className="block text-sm text-gray-600 dark:text-gray-300">Steps</label>
                     <button type="button" onClick={() => addStep({ text: '' })}
-                      className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-full text-xs hover:bg-amber-100">
+                      className="flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-300 rounded-full text-xs hover:bg-amber-100 dark:hover:bg-amber-900/40">
                       <Plus className="w-3 h-3" /> Add Step
                     </button>
                   </div>
                   <div className="space-y-2">
                     {stepFields.map((field, i) => (
                       <div key={field.id} className="flex gap-2 items-start">
-                        <span className="flex-shrink-0 w-6 h-7 flex items-center justify-center text-xs text-amber-600 font-bold">{i + 1}</span>
-                        <textarea {...register(`steps.${i}.text`)} placeholder={`Step ${i + 1}...`} rows={2} className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-amber-400 bg-gray-50 resize-none" />
-                        <button type="button" onClick={() => removeStep(i)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg mt-0.5">
+                        <span className="flex-shrink-0 w-6 h-7 flex items-center justify-center text-xs text-amber-600 dark:text-amber-300 font-bold">{i + 1}</span>
+                        <textarea {...register(`steps.${i}.text`)} placeholder={`Step ${i + 1}...`} rows={2} className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 resize-none" />
+                        <button type="button" onClick={() => removeStep(i)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg mt-0.5">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -356,10 +356,10 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
             {/* Nutrition Tab */}
             {activeTab === 'nutrition' && (
               <>
-                <div className="flex items-center justify-between p-3 bg-violet-50 rounded-xl mb-2">
+                <div className="flex items-center justify-between p-3 bg-violet-50 dark:bg-violet-950/30 rounded-xl mb-2">
                   <div>
-                    <p className="text-sm text-violet-700" style={{ fontWeight: 600 }}>AI Calculate Nutrition</p>
-                    <p className="text-xs text-violet-500">Based on your ingredients</p>
+                    <p className="text-sm text-violet-700 dark:text-violet-300" style={{ fontWeight: 600 }}>AI Calculate Nutrition</p>
+                    <p className="text-xs text-violet-500 dark:text-violet-400">Based on your ingredients</p>
                   </div>
                   <button type="button" onClick={handleAiNutrition} disabled={aiLoading === 'nutrition'}
                     className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-xl text-sm hover:bg-violet-700 disabled:opacity-50 transition-colors">
@@ -378,8 +378,8 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                     { key: 'sodium', label: 'Sodium (mg)', color: 'bg-gray-50 border-gray-200' },
                   ].map(field => (
                     <div key={field.key}>
-                      <label className="block text-xs text-gray-500 mb-1">{field.label}</label>
-                      <input type="number" {...register(field.key as keyof FormValues)} className={`w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-amber-400 ${field.color}`} />
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{field.label}</label>
+                      <input type="number" {...register(field.key as keyof FormValues)} className={`w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 text-gray-900 dark:text-gray-100 ${field.color}`} />
                     </div>
                   ))}
                 </div>
@@ -389,7 +389,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
 
           {/* Footer */}
           <div className="px-6 pb-6 flex gap-3 flex-shrink-0">
-            <button type="button" onClick={requestClose} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-600 text-sm hover:bg-gray-50">
+            <button type="button" onClick={requestClose} className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">
               Cancel
             </button>
             <button type="submit" className="flex-1 py-2.5 bg-amber-400 rounded-xl text-white text-sm hover:bg-amber-500 transition-colors" style={{ fontWeight: 600 }}>
