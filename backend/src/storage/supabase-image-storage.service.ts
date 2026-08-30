@@ -65,6 +65,42 @@ export class SupabaseImageStorageService {
     return { objectPath, publicUrl: data.publicUrl };
   }
 
+  async uploadReceiptImage(file?: UploadedImageFile) {
+    if (!file) {
+      throw new BadRequestException('Image file is required');
+    }
+    if (!ALLOWED_IMAGE_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException('Unsupported image type');
+    }
+    if (!file.buffer?.length) {
+      throw new BadRequestException('Image file is empty');
+    }
+
+    const extension = this.extensionFromMimeType(file.mimetype, file.originalname);
+    const objectPath = `receipts/${Date.now()}-${randomUUID()}${extension}`;
+
+    const { error } = await this.client.storage.from(this.bucket).upload(objectPath, file.buffer, {
+      contentType: file.mimetype,
+      cacheControl: '31536000',
+      upsert: false,
+    });
+
+    if (error) {
+      throw new InternalServerErrorException(`Failed to upload image to Supabase: ${error.message}`);
+    }
+
+    const { data } = this.client.storage.from(this.bucket).getPublicUrl(objectPath);
+    if (!data?.publicUrl) {
+      throw new InternalServerErrorException('Failed to resolve public image URL');
+    }
+
+    return { objectPath, publicUrl: data.publicUrl };
+  }
+
+  getPublicUrl(objectPath: string) {
+    return this.client.storage.from(this.bucket).getPublicUrl(objectPath);
+  }
+
   private extensionFromMimeType(mimetype: string, originalname: string) {
     switch (mimetype) {
       case 'image/jpeg':

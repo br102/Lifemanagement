@@ -44,6 +44,8 @@ model User {
   exercises        TrainingExercise[]
   trainingDays     TrainingDay[]
   workoutSessions  WorkoutSession[]
+  receipts         Receipt[]
+  ingredientPrices IngredientPrice[]
 }
 
 model Meal {
@@ -98,6 +100,7 @@ model Ingredient {
   id    String @id @default(cuid())
   name  String @unique
   meals MealIngredient[]
+  prices IngredientPrice[]
 }
 
 model MealIngredient {
@@ -284,4 +287,39 @@ model WorkoutSessionExercise {
   exercise          TrainingExercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@index([workoutSessionId, orderNo])
+}
+
+model Receipt {
+  id           String   @id @default(cuid())
+  userId       String
+  store        String   @default("Biedronka")
+  imageUrl     String
+  purchaseDate String
+  totalAmount  Float?
+  currency     String   @default("PLN")
+  createdAt    DateTime @default(now())
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prices       IngredientPrice[]
+
+  @@index([userId, purchaseDate])
+}
+
+model IngredientPrice {
+  id           String   @id @default(cuid())
+  userId       String
+  ingredientId String
+  receiptId    String?
+  price        Float
+  quantity     Float
+  unit         String
+  unitPrice    Float
+  currency     String   @default("PLN")
+  purchaseDate String
+  createdAt    DateTime @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  receipt      Receipt?   @relation(fields: [receiptId], references: [id], onDelete: SetNull)
+
+  @@index([ingredientId, purchaseDate])
+  @@index([userId, purchaseDate])
 }

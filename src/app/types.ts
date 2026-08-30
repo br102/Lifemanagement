@@ -166,3 +166,45 @@ export interface TrainingBalance {
   categoryDistribution: Record<string, number>;
   warnings: string[];
 }
+
+export interface ReceiptLineItem {
+  name: string;
+  quantity: number;
+  unit: string;
+  price: number;
+  unitPrice?: number;
+}
+
+export interface Receipt {
+  id: string;
+  store: string;
+  imageUrl: string;
+  purchaseDate: string;
+  totalAmount?: number;
+  currency: string;
+  items: ReceiptLineItem[];
+  createdAt: string;
+}
+
+export interface IngredientPrice {
+  ingredientId: string;
+  name: string;
+  unitPrice: number;
+  unit: string;
+  purchaseDate: string;
+  currency: string;
+}
+
+export interface MealCostEstimate {
+  mealId: string;
+  mealName: string;
+  estimatedCost: number;
+  currency: string;
+  missingIngredients: string[];
+}
+
+export interface GroceryEstimate {
+  totalCost: number;
+  currency: string;
+  missingItems: string[];
+}

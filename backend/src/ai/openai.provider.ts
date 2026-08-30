@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AiProvider, GrocerySuggestion, MealClassification, MealDraftSuggestion, NutritionResult, PlannerInput } from './ai-provider.interface';
+import { AiProvider, GrocerySuggestion, MealClassification, MealDraftSuggestion, NutritionResult, PlannerInput, ReceiptParseResult } from './ai-provider.interface';
 
 @Injectable()
 export class OpenAiProvider implements AiProvider {
@@ -205,6 +205,42 @@ Items: ${JSON.stringify(items)}`;
       }));
   }
 
+  async parseReceipt(imageUrl: string, knownIngredientNames: string[]): Promise<ReceiptParseResult> {
+    const prompt = `This is a photo of a Biedronka (Polish supermarket) receipt. Extract each food line item from the receipt.
+For each item, provide: ingredient name (normalized to English, reuse a name from the known list if it matches, otherwise propose a new concise name), quantity, unit (normalized to: g | kg | ml | l | pcs), and price paid.
+Skip non-food items (bags, deposits, loyalty discounts, etc.).
+Return strict JSON:
+{
+  "store": "Biedronka",
+  "purchaseDate": "YYYY-MM-DD",
+  "totalAmount": number or null,
+  "items": [{"name":"string","quantity":number,"unit":"g|kg|ml|l|pcs","price":number}]
+}
+Known ingredient names to match against: ${JSON.stringify(knownIngredientNames)}`;
+
+    const json = await this.askJsonWithImage(prompt, imageUrl);
+
+    const store = this.optionalString(json, 'store') ?? 'Biedronka';
+    const purchaseDate = this.optionalString(json, 'purchaseDate') ?? new Date().toISOString().split('T')[0];
+    const totalAmount = json?.totalAmount ? Number(json.totalAmount) : undefined;
+    const itemsRaw = Array.isArray(json?.items) ? json.items : [];
+
+    const items = itemsRaw
+      .filter((item: unknown) => item && typeof item === 'object')
+      .map((item: any) => ({
+        name: this.requiredString(item, 'name'),
+        quantity: this.requiredInt(item, 'quantity'),
+        unit: this.requiredString(item, 'unit'),
+        price: this.requiredFloat(item, 'price'),
+      }));
+
+    if (items.length === 0) {
+      throw new Error('OpenAI parseReceipt extracted no food items from the receipt');
+    }
+
+    return { store, purchaseDate, totalAmount, items };
+  }
+
   private async askJson(prompt: string): Promise<any> {
     if (!this.apiKey) {
       throw new Error('OPENAI_API_KEY is missing');
@@ -222,6 +258,59 @@ Items: ${JSON.stringify(items)}`;
         messages: [
           { role: 'system', content: 'You are a food planning assistant. Output strict JSON only. No markdown.' },
           { role: 'user', content: prompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`OpenAI error ${response.status}: ${errText}`);
+    }
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content || typeof content !== 'string') {
+      throw new Error('OpenAI returned empty content');
+    }
+    try {
+      return JSON.parse(content);
+    } catch {
+      const start = content.indexOf('{');
+      const end = content.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        const maybeJson = content.slice(start, end + 1);
+        try {
+          return JSON.parse(maybeJson);
+        } catch {
+          // continue to throw below
+        }
+      }
+      throw new Error(`OpenAI returned non-JSON content: ${content.slice(0, 160)}`);
+    }
+  }
+
+  private async askJsonWithImage(prompt: string, imageUrl: string): Promise<any> {
+    if (!this.apiKey) {
+      throw new Error('OPENAI_API_KEY is missing');
+    }
+
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: this.model,
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: 'You are a food planning assistant specialized in receipt extraction. Output strict JSON only. No markdown.' },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: imageUrl } },
+            ],
+          },
         ],
       }),
     });
@@ -292,5 +381,17 @@ Items: ${JSON.stringify(items)}`;
       throw new Error(`OpenAI response invalid boolean for key "${key}"`);
     }
     return value;
+  }
+
+  private requiredFloat(source: unknown, key: string): number {
+    if (!source || typeof source !== 'object') {
+      throw new Error(`OpenAI response missing object for key "${key}"`);
+    }
+    const value = (source as Record<string, unknown>)[key];
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+      throw new Error(`OpenAI response invalid float for key "${key}"`);
+    }
+    return n;
   }
 }

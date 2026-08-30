@@ -47,6 +47,20 @@ export interface GrocerySuggestion {
   estimatedExpirationDate?: string;
 }
 
+export interface ReceiptItemSuggestion {
+  name: string;
+  quantity: number;
+  unit: string;
+  price: number;
+}
+
+export interface ReceiptParseResult {
+  store: string;
+  purchaseDate: string;
+  totalAmount?: number;
+  items: ReceiptItemSuggestion[];
+}
+
 export interface MealDraftSuggestion {
   name?: string;
   category?: string;
@@ -68,4 +82,5 @@ export interface AiProvider {
   draftMealFromLink(link: string): Promise<MealDraftSuggestion>;
   generateWeekPlan(input: PlannerInput): Promise<Record<string, Partial<Record<'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', string>>>>;
   suggestGroceryMeta(items: Array<{ name: string; category: string }>): Promise<GrocerySuggestion[]>;
+  parseReceipt(imageUrl: string, knownIngredientNames: string[]): Promise<ReceiptParseResult>;
 }

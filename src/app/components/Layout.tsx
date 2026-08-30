@@ -10,7 +10,7 @@ const NAV_ITEMS = [
   { path: '/planner', label: 'Meal Planner', icon: CalendarDays },
   { path: '/groceries', label: 'Groceries', icon: ShoppingCart },
   { path: '/veggies', label: 'Veggie Recipes', icon: Leaf },
-  { path: '/expenses', label: 'Expenses', icon: CreditCard, disabled: true },
+  { path: '/expenses', label: 'Expenses', icon: CreditCard },
   { path: '/exercise', label: 'Exercise', icon: Dumbbell },
 ];
 
@@ -26,6 +26,7 @@ export function Layout() {
     '/planner': 'Meal Planner',
     '/groceries': 'Grocery List',
     '/veggies': 'Veggie Recipes',
+    '/expenses': 'Expenses',
     '/exercise': 'Training',
   };
   const currentTitle = pageTitles[location.pathname] || 'LifeHub';
@@ -61,17 +62,7 @@ export function Layout() {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.08em' }} className="text-gray-400 dark:text-gray-600 uppercase px-3 mb-2">Menu</p>
-          {NAV_ITEMS.map(item => {
-            if (item.disabled) {
-              return (
-                <div key={item.path} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-300 dark:text-gray-700 cursor-not-allowed">
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  <span style={{ fontSize: '0.875rem' }}>{item.label}</span>
-                  <span className="ml-auto text-xs bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 px-2 py-0.5 rounded-full">Soon</span>
-                </div>
-              );
-            }
-            return (
+          {NAV_ITEMS.map(item => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -93,8 +84,7 @@ export function Layout() {
                   </>
                 )}
               </NavLink>
-            );
-          })}
+            ))}
         </nav>
 
         {/* Footer */}

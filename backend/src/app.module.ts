@@ -10,6 +10,7 @@ import { ProfileModule } from './profile/profile.module';
 import { TrainingModule } from './training/training.module';
 import { AiModule } from './ai/ai.module';
 import { StorageModule } from './storage/storage.module';
+import { ExpensesModule } from './expenses/expenses.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RateLimitMiddleware } from './common/rate-limit/rate-limit.middleware';
 import { RequestLoggerMiddleware } from './common/logger/request-logger.middleware';
@@ -26,6 +27,7 @@ import { RequestLoggerMiddleware } from './common/logger/request-logger.middlewa
     GroceriesModule,
     ProfileModule,
     TrainingModule,
+    ExpensesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })

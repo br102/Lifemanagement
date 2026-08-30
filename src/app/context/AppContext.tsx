@@ -11,6 +11,11 @@ import type {
   TrainingDay,
   WorkoutSession,
   TrainingBalance,
+  Receipt,
+  IngredientPrice,
+  MealCostEstimate,
+  GroceryEstimate,
+  ReceiptLineItem,
 } from '../types';
 
 interface AppContextType {
@@ -72,6 +77,13 @@ interface AppContextType {
   deleteTrainingDay: (date: string) => Promise<void>;
   logWorkoutSession: (session: Omit<WorkoutSession, 'id' | 'createdAt'>) => Promise<WorkoutSession>;
   loadTrainingBalance: (from: string, to: string) => Promise<TrainingBalance>;
+  uploadReceiptImage: (file: File) => Promise<string>;
+  parseReceiptImage: (imageUrl: string) => Promise<{ store: string; purchaseDate: string; totalAmount?: number; items: ReceiptLineItem[] }>;
+  confirmReceipt: (store: string, purchaseDate: string, totalAmount: number | undefined, imageUrl: string, items: ReceiptLineItem[]) => Promise<Receipt>;
+  loadReceiptHistory: () => Promise<Receipt[]>;
+  loadIngredientPrices: () => Promise<IngredientPrice[]>;
+  loadMealCosts: () => Promise<MealCostEstimate[]>;
+  getGroceryEstimate: (weekStartDate: string) => Promise<GroceryEstimate>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -475,6 +487,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return balance as TrainingBalance;
   }, []);
 
+  const uploadReceiptImage = useCallback(async (file: File) => {
+    const token = getStoredValue(ACCESS_TOKEN_KEY);
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_URL}/expenses/receipts/upload-image`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
+    if (!res.ok) throw new Error('Failed to upload receipt image');
+    const data = await res.json();
+    return data.imageUrl;
+  }, []);
+
+  const parseReceiptImage = useCallback(
+    async (imageUrl: string) => {
+      const result = await authFetch('/expenses/receipts/parse', {
+        method: 'POST',
+        body: JSON.stringify({ imageUrl }),
+      });
+      return result;
+    },
+    [],
+  );
+
+  const confirmReceipt = useCallback(async (store: string, purchaseDate: string, totalAmount: number | undefined, imageUrl: string, items: ReceiptLineItem[]) => {
+    const result = await authFetch('/expenses/receipts', {
+      method: 'POST',
+      body: JSON.stringify({ store, purchaseDate, totalAmount, currency: 'PLN', imageUrl, items }),
+    });
+    return result as Receipt;
+  }, []);
+
+  const loadReceiptHistory = useCallback(async () => {
+    const result = await authFetch('/expenses/receipts');
+    return (result || []) as Receipt[];
+  }, []);
+
+  const loadIngredientPrices = useCallback(async () => {
+    const result = await authFetch('/expenses/ingredients/prices');
+    return (result || []) as IngredientPrice[];
+  }, []);
+
+  const loadMealCosts = useCallback(async () => {
+    const result = await authFetch('/expenses/meals/costs');
+    return (result || []) as MealCostEstimate[];
+  }, []);
+
+  const getGroceryEstimate = useCallback(async (weekStartDate: string) => {
+    const result = await authFetch(`/expenses/groceries/${weekStartDate}/estimate`);
+    return result as GroceryEstimate;
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -516,6 +581,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteTrainingDay,
         logWorkoutSession,
         loadTrainingBalance,
+        uploadReceiptImage,
+        parseReceiptImage,
+        confirmReceipt,
+        loadReceiptHistory,
+        loadIngredientPrices,
+        loadMealCosts,
+        getGroceryEstimate,
       }}
     >
       {children}
