@@ -144,12 +144,25 @@ Link: ${link}`;
 
   async generateWeekPlan(input: PlannerInput): Promise<Record<string, Partial<Record<'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', string>>>> {
     const mealPool = input.meals.map((m) => ({ id: m.id, name: m.name, types: m.types }));
+    const profileBlock = input.profile
+      ? `User profile:
+${JSON.stringify(input.profile, null, 2)}`
+      : 'User profile: not provided';
     const prompt = `Create a 7-day meal plan from weekStartDate ${input.weekStartDate}.
 Return strict JSON object where each key is YYYY-MM-DD and each value is:
 {"breakfast":"mealId|null","lunch":"mealId|null","snack":"mealId|null","proteinShake":"mealId|null","dinner":"mealId|null"}
 Use only meal IDs from this pool:
 ${JSON.stringify(mealPool)}
-Goal: nutritional balance, variety, ingredient reuse, realistic cooking schedule.`;
+${profileBlock}
+Goal:
+- Optimize for the user's fitness goal and dietary profile.
+- Prefer meals that help hit calorie and macro targets if they are available.
+- Respect allergies, dislikes, and dietary preferences.
+- Keep variety across the week, but allow smart repetition for meal prep efficiency.
+- Include enough protein distribution for the full day.
+- If the profile suggests fat loss, use a modest deficit; if muscle gain, bias toward higher protein and adequate calories; if maintenance, keep calories steady.
+- Favor meals with better scores when multiple options fit equally well.
+- Leave a slot null if no meal in the pool is a good fit.`;
     const json = await this.askJson(prompt);
     if (!json || typeof json !== 'object' || Array.isArray(json)) {
       throw new Error('OpenAI generateWeekPlan returned invalid JSON');

@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Meal, WeekPlan, GroceryList, MealType, NutritionalValue, Ingredient } from '../types';
+import type { Meal, WeekPlan, GroceryList, MealType, NutritionalValue, Ingredient, UserProfile } from '../types';
 
 interface AppContextType {
   meals: Meal[];
   weekPlans: WeekPlan[];
   groceryLists: GroceryList[];
+  userProfile: UserProfile | null;
   isAuthenticated: boolean;
   authLoading: boolean;
   currentUserName: string | null;
@@ -43,8 +44,10 @@ interface AppContextType {
     servings?: number;
     tags?: string[];
   }>;
-  aiGenerateMealPlan: (weekStartDate: string, veggiePrefs?: Set<string>) => Promise<WeekPlan>;
+  aiGenerateMealPlan: (weekStartDate: string) => Promise<WeekPlan>;
   aiGenerateGroceryList: (weekStartDate: string) => Promise<GroceryList>;
+  getUserProfile: () => Promise<UserProfile | null>;
+  saveUserProfile: (profile: Partial<UserProfile>) => Promise<UserProfile>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -130,6 +133,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [weekPlans, setWeekPlans] = useState<WeekPlan[]>([]);
   const [groceryLists, setGroceryLists] = useState<GroceryList[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
@@ -167,6 +171,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const loadInitialData = useCallback(async () => {
     const mealsRes = await authFetch('/meals');
     setMeals(mealsRes || []);
+    const profileRes = await authFetch('/profile/me');
+    setUserProfile(profileRes || null);
 
     const today = new Date();
     const monday = new Date(today);
@@ -336,6 +342,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const getUserProfile = useCallback(async () => {
+    const profile = await authFetch('/profile/me');
+    setUserProfile(profile as UserProfile);
+    return profile as UserProfile;
+  }, []);
+
+  const saveUserProfile = useCallback(async (profile: Partial<UserProfile>) => {
+    const updated = await authFetch('/profile/me', {
+      method: 'PATCH',
+      body: JSON.stringify(profile),
+    });
+    setUserProfile(updated as UserProfile);
+    return updated as UserProfile;
+  }, []);
+
   const aiGenerateMealPlan = useCallback(async (weekStartDate: string) => {
     const plan = await authFetch(`/planner/week/${weekStartDate}/ai-generate`, { method: 'POST' });
     saveWeekPlan(plan as WeekPlan);
@@ -354,6 +375,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         meals,
         weekPlans,
         groceryLists,
+        userProfile,
         isAuthenticated,
         authLoading,
         currentUserName,
@@ -374,6 +396,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         aiDraftMealFromLink,
         aiGenerateMealPlan,
         aiGenerateGroceryList,
+        getUserProfile,
+        saveUserProfile,
       }}
     >
       {children}

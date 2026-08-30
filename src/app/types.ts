@@ -74,3 +74,26 @@ export interface GroceryList {
   generatedAt: string;
   items: GroceryItem[];
 }
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName?: string | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  age?: number | null;
+  sex?: string | null;
+  activityLevel?: string | null;
+  fitnessGoal?: string | null;
+  goalNotes?: string | null;
+  dietaryPreferences?: string[];
+  allergies?: string[];
+  dislikes?: string[];
+  targetCalories?: number | null;
+  targetProtein?: number | null;
+  targetCarbs?: number | null;
+  targetFat?: number | null;
+  mealsPerDay?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}

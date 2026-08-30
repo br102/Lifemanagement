@@ -6,6 +6,7 @@ import { DatabaseModule } from './database/database.module';
 import { MealsModule } from './meals/meals.module';
 import { MealPlannerModule } from './meal-planner/meal-planner.module';
 import { GroceriesModule } from './groceries/groceries.module';
+import { ProfileModule } from './profile/profile.module';
 import { AiModule } from './ai/ai.module';
 import { StorageModule } from './storage/storage.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -22,6 +23,7 @@ import { RequestLoggerMiddleware } from './common/logger/request-logger.middlewa
     MealsModule,
     MealPlannerModule,
     GroceriesModule,
+    ProfileModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })

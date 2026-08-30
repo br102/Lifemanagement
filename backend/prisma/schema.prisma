@@ -16,15 +16,31 @@ enum MealType {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  passwordHash   String
+  id               String   @id @default(cuid())
+  email            String   @unique
+  passwordHash     String
   refreshTokenHash String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  meals          Meal[]
-  weekPlans      WeekPlan[]
-  groceryLists   GroceryList[]
+  displayName      String?
+  weightKg         Float?
+  heightCm         Float?
+  age              Int?
+  sex              String?
+  activityLevel    String?
+  fitnessGoal      String?
+  goalNotes        String?
+  dietaryPreferences String[]
+  allergies        String[]
+  dislikes         String[]
+  targetCalories   Int?
+  targetProtein    Int?
+  targetCarbs      Int?
+  targetFat        Int?
+  mealsPerDay      Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  meals            Meal[]
+  weekPlans        WeekPlan[]
+  groceryLists     GroceryList[]
 }
 
 model Meal {
