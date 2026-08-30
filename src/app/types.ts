@@ -97,3 +97,72 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
 }
+
+export type TrainingDayStatus = 'planned' | 'completed' | 'skipped';
+
+export interface TrainingExercise {
+  id: string;
+  name: string;
+  category: string;
+  muscleGroups: string[];
+  equipment?: string;
+  difficulty?: string;
+  instructions?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface TrainingDayExercise {
+  id?: string;
+  exerciseId: string;
+  sets?: number;
+  reps?: number;
+  durationMin?: number;
+  targetWeight?: number;
+  intensity?: string;
+  notes?: string;
+  exercise: TrainingExercise;
+}
+
+export interface TrainingDay {
+  id: string;
+  date: string;
+  status: TrainingDayStatus;
+  notes?: string;
+  exercises: TrainingDayExercise[];
+}
+
+export interface WorkoutSessionExercise {
+  id?: string;
+  exerciseId: string;
+  sets?: number;
+  reps?: number;
+  weight?: number;
+  durationMin?: number;
+  notes?: string;
+  exercise: TrainingExercise;
+}
+
+export interface WorkoutSession {
+  id: string;
+  trainingDayId?: string;
+  date: string;
+  status: TrainingDayStatus;
+  durationMin?: number;
+  notes?: string;
+  exercises: WorkoutSessionExercise[];
+  createdAt: string;
+}
+
+export interface TrainingBalance {
+  from?: string;
+  to?: string;
+  plannedWorkouts: number;
+  completedWorkouts: number;
+  skippedWorkouts: number;
+  totalLoggedMinutes: number;
+  plannedMuscleGroups: Record<string, number>;
+  completedMuscleGroups: Record<string, number>;
+  categoryDistribution: Record<string, number>;
+  warnings: string[];
+}

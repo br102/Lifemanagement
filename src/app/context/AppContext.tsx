@@ -1,11 +1,27 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Meal, WeekPlan, GroceryList, MealType, NutritionalValue, Ingredient, UserProfile } from '../types';
+import type {
+  Meal,
+  WeekPlan,
+  GroceryList,
+  MealType,
+  NutritionalValue,
+  Ingredient,
+  UserProfile,
+  TrainingExercise,
+  TrainingDay,
+  WorkoutSession,
+  TrainingBalance,
+} from '../types';
 
 interface AppContextType {
   meals: Meal[];
   weekPlans: WeekPlan[];
   groceryLists: GroceryList[];
   userProfile: UserProfile | null;
+  trainingExercises: TrainingExercise[];
+  trainingDays: TrainingDay[];
+  workoutSessions: WorkoutSession[];
+  trainingBalance: TrainingBalance | null;
   isAuthenticated: boolean;
   authLoading: boolean;
   currentUserName: string | null;
@@ -48,6 +64,14 @@ interface AppContextType {
   aiGenerateGroceryList: (weekStartDate: string) => Promise<GroceryList>;
   getUserProfile: () => Promise<UserProfile | null>;
   saveUserProfile: (profile: Partial<UserProfile>) => Promise<UserProfile>;
+  addTrainingExercise: (exercise: Omit<TrainingExercise, 'id' | 'createdAt' | 'updatedAt'>) => Promise<TrainingExercise>;
+  updateTrainingExercise: (exercise: TrainingExercise) => Promise<void>;
+  deleteTrainingExercise: (id: string) => Promise<void>;
+  loadTrainingRange: (from: string, to: string) => Promise<void>;
+  saveTrainingDay: (day: Omit<TrainingDay, 'id'>) => Promise<TrainingDay>;
+  deleteTrainingDay: (date: string) => Promise<void>;
+  logWorkoutSession: (session: Omit<WorkoutSession, 'id' | 'createdAt'>) => Promise<WorkoutSession>;
+  loadTrainingBalance: (from: string, to: string) => Promise<TrainingBalance>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -134,6 +158,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [weekPlans, setWeekPlans] = useState<WeekPlan[]>([]);
   const [groceryLists, setGroceryLists] = useState<GroceryList[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [trainingExercises, setTrainingExercises] = useState<TrainingExercise[]>([]);
+  const [trainingDays, setTrainingDays] = useState<TrainingDay[]>([]);
+  const [workoutSessions, setWorkoutSessions] = useState<WorkoutSession[]>([]);
+  const [trainingBalance, setTrainingBalance] = useState<TrainingBalance | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
@@ -157,6 +185,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const saveTrainingDayLocal = useCallback((day: TrainingDay) => {
+    setTrainingDays((prev) => {
+      const exists = prev.find((item) => item.date === day.date);
+      if (!exists) return [...prev, day].sort((a, b) => a.date.localeCompare(b.date));
+      return prev.map((item) => (item.date === day.date ? day : item)).sort((a, b) => a.date.localeCompare(b.date));
+    });
+  }, []);
+
   const loadWeekPlan = useCallback(async (weekStartDate: string) => {
     const plan = await authFetch(`/planner/week/${weekStartDate}`);
     saveWeekPlan(plan);
@@ -173,6 +209,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMeals(mealsRes || []);
     const profileRes = await authFetch('/profile/me');
     setUserProfile(profileRes || null);
+    const exerciseRes = await authFetch('/training/exercises');
+    setTrainingExercises(exerciseRes || []);
 
     const today = new Date();
     const monday = new Date(today);
@@ -191,6 +229,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await loadWeekPlan(weekStart);
       await loadGrocery(weekStart);
     }
+    const trainingFrom = weekStarts[0];
+    const trainingToDate = new Date(`${weekStarts[weekStarts.length - 1]}T00:00:00`);
+    trainingToDate.setDate(trainingToDate.getDate() + 6);
+    const trainingTo = trainingToDate.toISOString().slice(0, 10);
+    const [daysRes, sessionsRes, balanceRes] = await Promise.all([
+      authFetch(`/training/schedule?from=${trainingFrom}&to=${trainingTo}`),
+      authFetch(`/training/sessions?from=${trainingFrom}&to=${trainingTo}`),
+      authFetch(`/training/balance?from=${trainingFrom}&to=${trainingTo}`),
+    ]);
+    setTrainingDays(daysRes || []);
+    setWorkoutSessions(sessionsRes || []);
+    setTrainingBalance(balanceRes || null);
   }, [loadWeekPlan, loadGrocery]);
 
   useEffect(() => {
@@ -252,6 +302,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMeals([]);
     setWeekPlans([]);
     setGroceryLists([]);
+    setTrainingExercises([]);
+    setTrainingDays([]);
+    setWorkoutSessions([]);
+    setTrainingBalance(null);
     setIsAuthenticated(false);
     setCurrentUserName(null);
   }, []);
@@ -369,6 +423,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return list as GroceryList;
   }, [saveGroceryList]);
 
+  const addTrainingExercise = useCallback(async (exercise: Omit<TrainingExercise, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const created = await authFetch('/training/exercises', { method: 'POST', body: JSON.stringify(exercise) });
+    setTrainingExercises((prev) => [created as TrainingExercise, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+    return created as TrainingExercise;
+  }, []);
+
+  const updateTrainingExercise = useCallback(async (exercise: TrainingExercise) => {
+    const updated = await authFetch(`/training/exercises/${exercise.id}`, { method: 'PATCH', body: JSON.stringify(exercise) });
+    setTrainingExercises((prev) => prev.map((item) => (item.id === exercise.id ? updated as TrainingExercise : item)).sort((a, b) => a.name.localeCompare(b.name)));
+  }, []);
+
+  const deleteTrainingExercise = useCallback(async (id: string) => {
+    await authFetch(`/training/exercises/${id}`, { method: 'DELETE' });
+    setTrainingExercises((prev) => prev.filter((item) => item.id !== id));
+    setTrainingDays((prev) => prev.map((day) => ({ ...day, exercises: day.exercises.filter((item) => item.exerciseId !== id) })));
+  }, []);
+
+  const loadTrainingRange = useCallback(async (from: string, to: string) => {
+    const [daysRes, sessionsRes] = await Promise.all([
+      authFetch(`/training/schedule?from=${from}&to=${to}`),
+      authFetch(`/training/sessions?from=${from}&to=${to}`),
+    ]);
+    setTrainingDays(daysRes || []);
+    setWorkoutSessions(sessionsRes || []);
+  }, []);
+
+  const saveTrainingDay = useCallback(async (day: Omit<TrainingDay, 'id'>) => {
+    const saved = await authFetch('/training/schedule', { method: 'POST', body: JSON.stringify(day) });
+    saveTrainingDayLocal(saved as TrainingDay);
+    return saved as TrainingDay;
+  }, [saveTrainingDayLocal]);
+
+  const deleteTrainingDay = useCallback(async (date: string) => {
+    await authFetch(`/training/schedule/${date}`, { method: 'DELETE' });
+    setTrainingDays((prev) => prev.filter((item) => item.date !== date));
+  }, []);
+
+  const logWorkoutSession = useCallback(async (session: Omit<WorkoutSession, 'id' | 'createdAt'>) => {
+    const saved = await authFetch('/training/sessions', { method: 'POST', body: JSON.stringify(session) });
+    setWorkoutSessions((prev) => [saved as WorkoutSession, ...prev]);
+    if (session.trainingDayId) {
+      setTrainingDays((prev) => prev.map((day) => (day.id === session.trainingDayId ? { ...day, status: (session.status || 'completed') as any } : day)));
+    }
+    return saved as WorkoutSession;
+  }, []);
+
+  const loadTrainingBalance = useCallback(async (from: string, to: string) => {
+    const balance = await authFetch(`/training/balance?from=${from}&to=${to}`);
+    setTrainingBalance(balance as TrainingBalance);
+    return balance as TrainingBalance;
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -376,6 +482,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         weekPlans,
         groceryLists,
         userProfile,
+        trainingExercises,
+        trainingDays,
+        workoutSessions,
+        trainingBalance,
         isAuthenticated,
         authLoading,
         currentUserName,
@@ -398,6 +508,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         aiGenerateGroceryList,
         getUserProfile,
         saveUserProfile,
+        addTrainingExercise,
+        updateTrainingExercise,
+        deleteTrainingExercise,
+        loadTrainingRange,
+        saveTrainingDay,
+        deleteTrainingDay,
+        logWorkoutSession,
+        loadTrainingBalance,
       }}
     >
       {children}

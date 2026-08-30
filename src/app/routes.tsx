@@ -5,6 +5,7 @@ import { MealsPage } from './components/meals/MealsPage';
 import { MealPlannerPage } from './components/planner/MealPlannerPage';
 import { GroceriesPage } from './components/groceries/GroceriesPage';
 import { VeggiesPage } from './components/veggies/VeggiesPage';
+import { TrainingPage } from './components/training/TrainingPage';
 
 function ComingSoon({ title }: { title: string }) {
   return (
@@ -29,7 +30,7 @@ export const router = createBrowserRouter([
       { path: 'groceries', Component: GroceriesPage },
       { path: 'veggies', Component: VeggiesPage },
       { path: 'expenses', element: <ComingSoon title="Expenses" /> },
-      { path: 'exercise', element: <ComingSoon title="Exercise" /> },
+      { path: 'exercise', Component: TrainingPage },
     ],
   },
 ]);

@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { path: '/groceries', label: 'Groceries', icon: ShoppingCart },
   { path: '/veggies', label: 'Veggie Recipes', icon: Leaf },
   { path: '/expenses', label: 'Expenses', icon: CreditCard, disabled: true },
-  { path: '/exercise', label: 'Exercise', icon: Dumbbell, disabled: true },
+  { path: '/exercise', label: 'Exercise', icon: Dumbbell },
 ];
 
 export function Layout() {
@@ -26,6 +26,7 @@ export function Layout() {
     '/planner': 'Meal Planner',
     '/groceries': 'Grocery List',
     '/veggies': 'Veggie Recipes',
+    '/exercise': 'Training',
   };
   const currentTitle = pageTitles[location.pathname] || 'LifeHub';
 

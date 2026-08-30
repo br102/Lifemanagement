@@ -103,12 +103,12 @@ Link: ${link}`;
     const ingredients = Array.isArray(json?.ingredients)
       ? json.ingredients
           .filter((value: unknown) => value && typeof value === 'object')
-          .map((item) => ({
+          .map((item: Record<string, unknown>) => ({
             name: this.optionalString(item, 'name') ?? '',
             amount: this.optionalString(item, 'amount') ?? '',
             unit: this.optionalString(item, 'unit') ?? '',
           }))
-          .filter((item) => item.name.length > 0)
+          .filter((item: { name: string }) => item.name.length > 0)
       : [];
     const steps = Array.isArray(json?.steps)
       ? json.steps.map((step: unknown) => typeof step === 'string' ? step.trim() : '').filter(Boolean)
@@ -125,7 +125,7 @@ Link: ${link}`;
         }
       : undefined;
     const scoreValue = json?.score == null ? undefined : Number(json.score);
-    const score = Number.isFinite(scoreValue) ? Math.min(5, Math.max(1, Math.round(scoreValue))) : undefined;
+    const score = Number.isFinite(scoreValue) ? Math.min(5, Math.max(1, Math.round(scoreValue as number))) : undefined;
     return {
       name: this.optionalString(json, 'name'),
       category: this.optionalString(json, 'category'),
