@@ -83,7 +83,7 @@ export function TypewriterLetter({ onClose }: TypewriterLetterProps) {
         {/* Photo */}
         <div className="relative min-h-[350px] md:min-h-[650px] bg-rose-100">
           <img
-            src="/couple-photo.jpg"
+            src="/couple-photo.jpeg"
             alt="Our favorite memory"
             className="absolute inset-0 h-full w-full object-cover"
           />
@@ -94,8 +94,7 @@ export function TypewriterLetter({ onClose }: TypewriterLetterProps) {
             <Sparkles className="mb-3 w-6 h-6" />
 
             <p className="font-serif text-2xl italic">
-              “Every love story is beautiful,
-              but ours is my favorite.”
+              “To spend more time in the beach with my bitch.”
             </p>
           </div>
         </div>
