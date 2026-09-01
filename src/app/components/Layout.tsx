@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/veggies', label: 'Veggie Recipes', icon: Leaf },
   { path: '/expenses', label: 'Expenses', icon: CreditCard },
   { path: '/exercise', label: 'Exercise', icon: Dumbbell },
+  { path: '/letters', label: 'Letters', icon: Sparkles },
 ];
 
 export function Layout() {
