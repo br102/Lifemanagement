@@ -5,7 +5,7 @@ interface TypewriterLetterProps {
   onClose: () => void;
 }
 
-const letterText = `My dearest,
+const letterText = `My zlowiki,
 
 We met each other by causality, as when a leaf reach your hand moved by the wind.
 

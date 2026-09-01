@@ -17,11 +17,11 @@ export function LoveLetterPage() {
             <Heart className="mx-auto mb-5 w-10 h-10 text-rose-500 fill-rose-500 animate-pulse" />
 
             <h1 className="text-4xl sm:text-5xl font-serif font-bold text-rose-900 dark:text-rose-100">
-              For You, With Love
+              For You, With kocha
             </h1>
 
             <p className="mt-3 mb-8 text-rose-500 dark:text-rose-300">
-              There is something I want you to read...
+              I am a fucking weirdo xd...
             </p>
 
             <Envelope onOpen={() => setOpened(true)} />
