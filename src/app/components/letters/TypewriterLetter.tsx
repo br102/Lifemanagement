@@ -106,7 +106,7 @@ export function TypewriterLetter({ onClose }: TypewriterLetterProps) {
             <Heart className="mx-auto w-7 h-7 text-rose-500 fill-rose-500" />
 
             <h2 className="mt-3 font-serif text-3xl font-bold text-rose-900 dark:text-rose-100">
-              To My Love
+              To My Skarbie
             </h2>
 
             <div className="mx-auto mt-3 h-px w-20 bg-rose-200 dark:bg-rose-800" />
