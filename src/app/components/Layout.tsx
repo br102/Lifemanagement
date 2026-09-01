@@ -28,6 +28,7 @@ export function Layout() {
     '/veggies': 'Veggie Recipes',
     '/expenses': 'Expenses',
     '/exercise': 'Training',
+    '/letters': 'Letters',
   };
   const currentTitle = pageTitles[location.pathname] || 'LifeHub';
 
