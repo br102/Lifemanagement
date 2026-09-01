@@ -7,7 +7,7 @@ interface TypewriterLetterProps {
 
 const letterText = `My dearest,
 
-We met each other by causality, as when a leave reach your hand moved by the wind.
+We met each other by causality, as when a leaf reach your hand moved by the wind.
 
 Since then I have been only feeling excited, afraid and blissful. It is the same feeling as when you are watching the landscape from the top of a huge cliff.
 
