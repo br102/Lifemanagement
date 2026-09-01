@@ -9,24 +9,24 @@ const letterText = `My zlowiki,
 
 We met each other by causality, as when a leaf reach your hand moved by the wind.
 
-Since then I have been only feeling excited, afraid and blissful. It is the same feeling as when you are watching the landscape from the top of a huge cliff.
+Since then I have been only feeling excited, afraid and blissful. It is the same feeling as when you are watching a gorgeous landscape from the top of a cliff.
 
 You have made me change, and change, and change, helping me to find myself and I cannot appreciate it more. Changing scares but with you is easy to work on the best version of me.
 
-With this I only want to say Gracias. Thank you for being there, and always try to support me. And I hope that with me, at least you have learn something valuable.
+With this I only want to say Gracias. Thank you for being there and always try to support me. And I hope that with me, at least you have learn something valuable during this time.
 
-Now, everyday I wake up it is special, only with looking at your face. When sneak into my mind, my heart starts to beat harder, faster, blissfulness, yearning, with all the happiness of still being beating.
+Now, everyday I wake up it is special only with looking at your face. When you sneak into my mind, my heart starts to beat harder, faster, blissfulness, yearning, with all the happiness of still being beating.
 
 Because continue beating means keep sharing moments with you.
 
-One of the best, is just being able to sleep hearing your snores, scratching and hugging you.
+One of the best moments I appreciate the most, is just being able to fall sleep hearing your snores, scratching your back and hugging you.
 
 
-Currently, we are faraway from each other. Although, when I go out and I feel the wind in my cheek, hair; It reminds me to your gentle caresses.
+Currently, we are faraway from each other. Although, when I go out and I feel the wind in my cheek or hair; It reminds me to your gentle caresses.
 
-The wind reminds me you, to your part that is always moving and changing. But also the sea, whose waves tuck in the sand, as you do with my soul. 
+The wind reminds me you, to your part that is always moving and changing. But also the sea reminds me of your warmth, whose waves tuck in the sand, as you do with my soul. 
 
-We may be really different in a lot of thing, but at the same time I think our waves synchronize in our differences. We use them to get better, to know more about the world we live, and to enjoy more the time we spend together.
+We may be really different in a lot of thing, but at the same time I think our waves are able to synchronize in our differences. We use them to get better, to know more about the world we live, and to enjoy more the time we spend together.
 
 I love you and I really hope I will be able to spend my life with the most special person I have ever met.
 
@@ -36,17 +36,20 @@ I wrote it in Spanish, because it is the only way I can express my real feeling.
 
 I will continue studying polish to being able to talk with you, your friends, your family; to being able to truly understand you, and you to feel my real feelings.
 
+
 You taught me to follow the wind, without thinking. Just trust and close my eyes, even though it can be scary and painful sometimes. 
 
 Every day it is easier, I overthink less. Because every time I close my eyes I see you, I see your smile, your cap and your beautiful blonde hair.
 
-When I feel your lips next to mines, I melt, slowly, I melt. And I don't how I get more in love with you, even though I thought It is not possible.
+
+When I feel your lips next to mine, I melt, slowly, I melt. And I don't knowhow I get more in love with you, even though I thought It is not possible.
 
 The universe can move around me, the stars, the floor, the celling; and I don't fucking care, if I can feel your body next to mine.
 
-I enjoy that, at least for the moment, we spend our lives together, free and unpredictable as wind. Learning new things that we could never imagine before.
 
-Your always loved one,
+I really enjoy that, at least for the moment, we can spend our lives together free and unpredictable as wind. Learning new things that we could not imagine before.
+
+Your weirdo,
 
 Borja`;
 
