@@ -400,6 +400,13 @@ function VeggiePrefsModal({ weeksAhead, weekStart, onGenerate, onClose }: Veggie
 
 // ─── Week View ─────────────────────────────────────────────────────────────────
 
+interface DailyNutrients {
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+}
+
 function WeekView({ weekStart }: { weekStart: Date }) {
   const { meals, getWeekPlan } = useApp();
   const [pickerInfo, setPickerInfo] = useState<{ slot: Slot; date: string; mealId?: string } | null>(null);
@@ -411,20 +418,47 @@ function WeekView({ weekStart }: { weekStart: Date }) {
   const getMeal = (id?: string) => id ? meals.find(m => m.id === id) : undefined;
   const getDayPlan = (date: Date) => plan?.days.find(d => d.date === format(date, 'yyyy-MM-dd'));
 
+  const calculateDailyNutrients = (date: Date): DailyNutrients => {
+    const dayPlan = getDayPlan(date);
+    if (!dayPlan) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+    let totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    SLOTS.forEach(slot => {
+      const mealId = dayPlan[slot];
+      const meal = getMeal(mealId);
+      if (meal) {
+        totals.calories += meal.nutritionalValue.calories;
+        totals.protein += meal.nutritionalValue.protein || 0;
+        totals.carbs += meal.nutritionalValue.carbs || 0;
+        totals.fat += meal.nutritionalValue.fat || 0;
+      }
+    });
+    return totals;
+  };
+
   return (
     <>
       <div className="overflow-x-auto">
         <div className="min-w-[700px]">
-          {/* Day headers */}
+          {/* Day headers with daily totals */}
           <div className="grid grid-cols-8 gap-2 mb-3">
             <div />
-            {days.map(day => (
-              <div key={day.toISOString()} className={`text-center rounded-xl py-2 ${isToday(day) ? 'bg-amber-400 text-white' : 'bg-white dark:bg-gray-700/50 text-gray-600 dark:text-gray-400'}`}>
-                <p style={{ fontSize: '0.7rem' }} className="opacity-70">{DAY_LABELS[getDay(day) === 0 ? 6 : getDay(day) - 1]}</p>
-                <p style={{ fontSize: '0.9rem', fontWeight: 700 }}>{format(day, 'd')}</p>
-                {isToday(day) && <p style={{ fontSize: '0.55rem' }} className="opacity-80">TODAY</p>}
-              </div>
-            ))}
+            {days.map(day => {
+              const nutrients = calculateDailyNutrients(day);
+              return (
+                <div key={day.toISOString()} className={`text-center rounded-xl py-2.5 ${isToday(day) ? 'bg-amber-400 text-white' : 'bg-white dark:bg-gray-700/50 text-gray-600 dark:text-gray-400'}`}>
+                  <p style={{ fontSize: '0.7rem' }} className="opacity-70">{DAY_LABELS[getDay(day) === 0 ? 6 : getDay(day) - 1]}</p>
+                  <p style={{ fontSize: '0.9rem', fontWeight: 700 }}>{format(day, 'd')}</p>
+                  {isToday(day) && <p style={{ fontSize: '0.55rem' }} className="opacity-80">TODAY</p>}
+                  {nutrients.calories > 0 && (
+                    <div className="mt-1.5 pt-1.5 border-t border-gray-300 dark:border-gray-600 opacity-80">
+                      <p style={{ fontSize: '0.7rem', fontWeight: 600 }}>{nutrients.calories} kcal</p>
+                      <p style={{ fontSize: '0.6rem' }} className="opacity-75">{nutrients.protein?.toFixed(0)}p · {nutrients.carbs?.toFixed(0)}c · {nutrients.fat?.toFixed(0)}f</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Meal slots */}
@@ -572,7 +606,7 @@ function MonthView({ currentDate, showMeals, onDayClick }: { currentDate: Date; 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function MealPlannerPage() {
-  const { aiGenerateMealPlan, saveWeekPlan, userProfile, saveUserProfile } = useApp();
+  const { aiGenerateMealPlan, saveWeekPlan } = useApp();
   const [view, setView] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState(() => new Date(2026, 3, 27));
   const [showMeals, setShowMeals] = useState(false);
@@ -580,46 +614,6 @@ export function MealPlannerPage() {
   const [showGenMenu, setShowGenMenu] = useState(false);
   const [veggieModal, setVeggieModal] = useState<{ weeksAhead: 0 | 1 | 2 } | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
-  const [profileDraft, setProfileDraft] = useState({
-    displayName: '',
-    weightKg: '',
-    heightCm: '',
-    age: '',
-    sex: '',
-    activityLevel: '',
-    fitnessGoal: '',
-    goalNotes: '',
-    dietaryPreferences: '',
-    allergies: '',
-    dislikes: '',
-    targetCalories: '',
-    targetProtein: '',
-    targetCarbs: '',
-    targetFat: '',
-    mealsPerDay: '',
-  });
-
-  useEffect(() => {
-    if (!userProfile) return;
-    setProfileDraft({
-      displayName: userProfile.displayName ?? '',
-      weightKg: userProfile.weightKg?.toString() ?? '',
-      heightCm: userProfile.heightCm?.toString() ?? '',
-      age: userProfile.age?.toString() ?? '',
-      sex: userProfile.sex ?? '',
-      activityLevel: userProfile.activityLevel ?? '',
-      fitnessGoal: userProfile.fitnessGoal ?? '',
-      goalNotes: userProfile.goalNotes ?? '',
-      dietaryPreferences: userProfile.dietaryPreferences?.join(', ') ?? '',
-      allergies: userProfile.allergies?.join(', ') ?? '',
-      dislikes: userProfile.dislikes?.join(', ') ?? '',
-      targetCalories: userProfile.targetCalories?.toString() ?? '',
-      targetProtein: userProfile.targetProtein?.toString() ?? '',
-      targetCarbs: userProfile.targetCarbs?.toString() ?? '',
-      targetFat: userProfile.targetFat?.toString() ?? '',
-      mealsPerDay: userProfile.mealsPerDay?.toString() ?? '',
-    });
-  }, [userProfile]);
 
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
@@ -647,28 +641,6 @@ export function MealPlannerPage() {
     }
   };
 
-  const handleSaveProfile = async () => {
-    await saveUserProfile({
-      displayName: profileDraft.displayName || undefined,
-      weightKg: profileDraft.weightKg ? Number(profileDraft.weightKg) : undefined,
-      heightCm: profileDraft.heightCm ? Number(profileDraft.heightCm) : undefined,
-      age: profileDraft.age ? Number(profileDraft.age) : undefined,
-      sex: profileDraft.sex || undefined,
-      activityLevel: profileDraft.activityLevel || undefined,
-      fitnessGoal: profileDraft.fitnessGoal || undefined,
-      goalNotes: profileDraft.goalNotes || undefined,
-      dietaryPreferences: profileDraft.dietaryPreferences.split(',').map((v) => v.trim()).filter(Boolean),
-      allergies: profileDraft.allergies.split(',').map((v) => v.trim()).filter(Boolean),
-      dislikes: profileDraft.dislikes.split(',').map((v) => v.trim()).filter(Boolean),
-      targetCalories: profileDraft.targetCalories ? Number(profileDraft.targetCalories) : undefined,
-      targetProtein: profileDraft.targetProtein ? Number(profileDraft.targetProtein) : undefined,
-      targetCarbs: profileDraft.targetCarbs ? Number(profileDraft.targetCarbs) : undefined,
-      targetFat: profileDraft.targetFat ? Number(profileDraft.targetFat) : undefined,
-      mealsPerDay: profileDraft.mealsPerDay ? Number(profileDraft.mealsPerDay) : undefined,
-    });
-    setSuccessMsg('Profile saved for meal planning.');
-    setTimeout(() => setSuccessMsg(''), 4000);
-  };
 
   const handleMonthDayClick = (date: Date) => {
     const ws = startOfWeek(date, { weekStartsOn: 1 });
@@ -779,56 +751,6 @@ export function MealPlannerPage() {
           </div>
         </div>
       )}
-
-      {/* Main Content */}
-      <div className="mb-4 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h3 className="text-gray-900 dark:text-white" style={{ fontWeight: 700 }}>Meal Planning Profile</h3>
-            <p className="text-gray-400 dark:text-gray-500 text-sm">These fields help the AI shape meals around your goal, body stats, and dietary constraints.</p>
-          </div>
-          <button onClick={handleSaveProfile} className="px-4 py-2 rounded-xl bg-violet-600 text-white text-sm" style={{ fontWeight: 600 }}>Save profile</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {[
-            ['displayName', 'Display name'],
-            ['weightKg', 'Weight kg'],
-            ['heightCm', 'Height cm'],
-            ['age', 'Age'],
-            ['sex', 'Sex'],
-            ['activityLevel', 'Activity level'],
-            ['fitnessGoal', 'Fitness goal'],
-            ['targetCalories', 'Target calories'],
-            ['mealsPerDay', 'Meals/day'],
-          ].map(([key, label]) => (
-            <label key={key} className="text-sm">
-              <span className="block mb-1 text-gray-500 dark:text-gray-400">{label}</span>
-              <input
-                value={(profileDraft as any)[key]}
-                onChange={(e) => setProfileDraft((prev) => ({ ...prev, [key]: e.target.value }))}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
-              />
-            </label>
-          ))}
-          <label className="md:col-span-3 text-sm">
-            <span className="block mb-1 text-gray-500 dark:text-gray-400">Goal notes</span>
-            <textarea
-              value={profileDraft.goalNotes}
-              onChange={(e) => setProfileDraft((prev) => ({ ...prev, goalNotes: e.target.value }))}
-              className="w-full min-h-[88px] rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-gray-900 dark:text-gray-100"
-              placeholder="Example: 3 training days/week, prefer simple lunches, no fish."
-            />
-          </label>
-          <label className="md:col-span-3 text-sm">
-            <span className="block mb-1 text-gray-500 dark:text-gray-400">Dietary preferences, allergies and dislikes</span>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <input value={profileDraft.dietaryPreferences} onChange={(e) => setProfileDraft((prev) => ({ ...prev, dietaryPreferences: e.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2" placeholder="vegetarian, high protein" />
-              <input value={profileDraft.allergies} onChange={(e) => setProfileDraft((prev) => ({ ...prev, allergies: e.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2" placeholder="peanuts, shellfish" />
-              <input value={profileDraft.dislikes} onChange={(e) => setProfileDraft((prev) => ({ ...prev, dislikes: e.target.value }))} className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 px-3 py-2" placeholder="mushrooms, olives" />
-            </div>
-          </label>
-        </div>
-      </div>
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700">
         {view === 'week' ? (
           <WeekView weekStart={weekStart} />
