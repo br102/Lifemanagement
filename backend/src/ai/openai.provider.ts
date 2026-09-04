@@ -229,7 +229,7 @@ Known ingredient names to match against: ${JSON.stringify(knownIngredientNames)}
       .filter((item: unknown) => item && typeof item === 'object')
       .map((item: any) => ({
         name: this.requiredString(item, 'name'),
-        quantity: this.requiredInt(item, 'quantity'),
+        quantity: this.requiredFloat(item, 'quantity'),
         unit: this.requiredString(item, 'unit'),
         price: this.requiredFloat(item, 'price'),
       }));
