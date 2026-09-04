@@ -3,6 +3,7 @@ import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkl
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
+import { MealPlanningProfileModal } from './profile/MealPlanningProfileModal';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: Home, end: true },
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
 
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const location = useLocation();
   const { isDark, toggle } = useTheme();
   const { currentUserName, logout } = useApp();
@@ -111,22 +113,29 @@ export function Layout() {
           </button>
 
           {/* User info */}
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl bg-amber-50 dark:bg-gray-800">
+          <button
+            onClick={() => setShowProfileModal(true)}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl bg-amber-50 dark:bg-gray-800 hover:bg-amber-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+            title="Click to open meal planning profile"
+          >
             <div className="w-8 h-8 rounded-full bg-amber-200 dark:bg-amber-900 flex items-center justify-center text-amber-700 dark:text-amber-300" style={{ fontSize: '0.75rem', fontWeight: 700 }}>
               {(currentUserName?.slice(0, 1) || 'U').toUpperCase()}
             </div>
-            <div>
+            <div className="flex-1 text-left">
               <p style={{ fontSize: '0.8rem', fontWeight: 600 }} className="text-gray-800 dark:text-gray-200">{currentUserName || 'User'}</p>
               <p style={{ fontSize: '0.7rem' }} className="text-gray-400 dark:text-gray-500">Health & Wellness</p>
             </div>
             <button
-              onClick={logout}
-              className="ml-auto p-2 rounded-lg text-gray-500 hover:bg-white/70 dark:hover:bg-gray-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                logout();
+              }}
+              className="p-2 rounded-lg text-gray-500 hover:bg-white/70 dark:hover:bg-gray-700"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
             </button>
-          </div>
+          </button>
         </div>
       </aside>
 
@@ -153,6 +162,11 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Meal Planning Profile Modal */}
+      {showProfileModal && (
+        <MealPlanningProfileModal onClose={() => setShowProfileModal(false)} />
+      )}
     </div>
   );
 }
