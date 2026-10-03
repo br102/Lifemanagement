@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -22,30 +22,6 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   sex?: string;
-
-  @IsOptional()
-  @IsString()
-  activityLevel?: string;
-
-  @IsOptional()
-  @IsString()
-  fitnessGoal?: string;
-
-  @IsOptional()
-  @IsString()
-  goalNotes?: string;
-
-  @IsOptional()
-  @IsArray()
-  dietaryPreferences?: string[];
-
-  @IsOptional()
-  @IsArray()
-  allergies?: string[];
-
-  @IsOptional()
-  @IsArray()
-  dislikes?: string[];
 
   @IsOptional()
   @IsInt()

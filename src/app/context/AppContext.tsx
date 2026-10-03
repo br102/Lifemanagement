@@ -47,8 +47,6 @@ interface AppContextType {
     primaryCategory: string;
     categories: string[];
     types: MealType[];
-    vegetarian: boolean;
-    lactoseFree: boolean;
   }>;
   aiCalculateNutrition: (name: string, ingredients: Ingredient[]) => Promise<NutritionalValue>;
   aiDraftMealFromLink: (link: string) => Promise<{
@@ -371,8 +369,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       primaryCategory: string;
       categories: string[];
       types: MealType[];
-      vegetarian: boolean;
-      lactoseFree: boolean;
     };
   }, []);
 

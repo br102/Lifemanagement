@@ -1,14 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   ChevronLeft, ChevronRight, Sparkles, Loader2, Plus, X, Search,
-  CalendarDays, LayoutGrid, Check, Pencil, Leaf, Sprout,
+  CalendarDays, LayoutGrid, Check, Pencil,
 } from 'lucide-react';
 import {
   format, addDays, addWeeks, startOfWeek, parseISO,
   isSameMonth, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isToday,
 } from 'date-fns';
 import { useApp } from '../../context/AppContext';
-import { getMealVeggieType, isVeggieMeal } from '../../utils/veggieUtils';
 import type { Meal, MealType } from '../../types';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -47,12 +46,10 @@ interface SlotPickerProps {
 function SlotPicker({ slot, weekStart, date, mealId, onClose }: SlotPickerProps) {
   const { meals, addMealToSlot, removeMealFromSlot } = useApp();
   const [search, setSearch] = useState('');
-  const [veggieOnly, setVeggieOnly] = useState(false);
   const slotType = SLOT_TYPES[slot];
   const relevant = meals.filter(m => m.types.includes(slotType));
   const filtered = relevant.filter(m => {
     if (search && !m.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (veggieOnly && !isVeggieMeal(m)) return false;
     return true;
   });
 
@@ -73,14 +70,6 @@ function SlotPicker({ slot, weekStart, date, mealId, onClose }: SlotPickerProps)
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search meals..." className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm focus:outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
           </div>
-          <button
-            onClick={() => setVeggieOnly(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all border ${veggieOnly ? 'bg-green-500 text-white border-green-500' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:border-green-300'}`}
-            style={{ fontWeight: veggieOnly ? 600 : 400 }}
-          >
-            <Leaf className="w-3 h-3" />
-            Veggie only
-          </button>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {mealId && (
@@ -89,309 +78,30 @@ function SlotPicker({ slot, weekStart, date, mealId, onClose }: SlotPickerProps)
               Remove current meal
             </button>
           )}
-          {filtered.map(meal => {
-            const vt = getMealVeggieType(meal);
-            return (
-              <button key={meal.id} onClick={() => { addMealToSlot(weekStart, date, slot, meal.id); onClose(); }}
-                className={`w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors text-left ${meal.id === mealId ? 'bg-amber-50 dark:bg-gray-700 ring-2 ring-amber-400' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
-                {meal.image ? (
-                  <img src={meal.image} alt={meal.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
-                    <span style={{ fontSize: '1.2rem' }}>🍽️</span>
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <p className="text-gray-800 dark:text-gray-200 text-sm truncate" style={{ fontWeight: 500 }}>{meal.name}</p>
-                    {vt === 'vegan' && (
-                      <span className="flex-shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full" style={{ fontSize: '0.6rem', fontWeight: 600 }}>
-                        <Sprout className="w-2 h-2" /> V
-                      </span>
-                    )}
-                    {vt === 'vegetarian' && (
-                      <span className="flex-shrink-0 flex items-center gap-0.5 px-1.5 py-0.5 bg-lime-100 text-lime-700 rounded-full" style={{ fontSize: '0.6rem', fontWeight: 600 }}>
-                        <Leaf className="w-2 h-2" /> V
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-400 dark:text-gray-500 text-xs">{meal.nutritionalValue.calories} kcal · {meal.category}</p>
+          {filtered.map(meal => (
+            <button key={meal.id} onClick={() => { addMealToSlot(weekStart, date, slot, meal.id); onClose(); }}
+              className={`w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors text-left ${meal.id === mealId ? 'bg-amber-50 dark:bg-gray-700 ring-2 ring-amber-400' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
+              {meal.image ? (
+                <img src={meal.image} alt={meal.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0">
+                  <span style={{ fontSize: '1.2rem' }}>🍽️</span>
                 </div>
-                {meal.id === mealId && <Check className="w-4 h-4 text-amber-500 flex-shrink-0" />}
-              </button>
-            );
-          })}
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <p className="text-gray-800 dark:text-gray-200 text-sm truncate" style={{ fontWeight: 500 }}>{meal.name}</p>
+                </div>
+                <p className="text-gray-400 dark:text-gray-500 text-xs">{meal.nutritionalValue.calories} kcal · {meal.category}</p>
+              </div>
+              {meal.id === mealId && <Check className="w-4 h-4 text-amber-500 flex-shrink-0" />}
+            </button>
+          ))}
           {filtered.length === 0 && (
             <p className="text-center text-gray-400 dark:text-gray-500 text-sm py-4">
-              {veggieOnly ? 'No veggie meals found for this slot' : `No ${slotType} meals found`}
+              No {slotType} meals found
             </p>
           )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Veggie Preferences Modal ─────────────────────────────────────────────────
-
-interface VeggiePrefsModalProps {
-  weeksAhead: 0 | 1 | 2;
-  weekStart: Date;
-  onGenerate: (veggiePrefs: Set<string>) => void;
-  onClose: () => void;
-}
-
-type Preset = 'all' | 'dinners' | 'lunches-dinners' | 'weekdays' | 'none';
-
-function VeggiePrefsModal({ weeksAhead, weekStart, onGenerate, onClose }: VeggiePrefsModalProps) {
-  const targetWeekStart = addWeeks(weekStart, weeksAhead);
-  const targetWeekEnd = addDays(targetWeekStart, 6);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const toggle = (dayIdx: number, slot: Slot) => {
-    const key = `${dayIdx}-${slot}`;
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const toggleDay = (dayIdx: number) => {
-    const keys = SLOTS.map(s => `${dayIdx}-${s}`);
-    const allSel = keys.every(k => selected.has(k));
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allSel) keys.forEach(k => next.delete(k));
-      else keys.forEach(k => next.add(k));
-      return next;
-    });
-  };
-
-  const toggleSlot = (slot: Slot) => {
-    const keys = DAY_LABELS.map((_, i) => `${i}-${slot}`);
-    const allSel = keys.every(k => selected.has(k));
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allSel) keys.forEach(k => next.delete(k));
-      else keys.forEach(k => next.add(k));
-      return next;
-    });
-  };
-
-  const applyPreset = (preset: Preset) => {
-    const next = new Set<string>();
-    if (preset === 'all') {
-      SLOTS.forEach(s => DAY_LABELS.forEach((_, i) => next.add(`${i}-${s}`)));
-    } else if (preset === 'dinners') {
-      DAY_LABELS.forEach((_, i) => next.add(`${i}-dinner`));
-    } else if (preset === 'lunches-dinners') {
-      DAY_LABELS.forEach((_, i) => { next.add(`${i}-lunch`); next.add(`${i}-dinner`); });
-    } else if (preset === 'weekdays') {
-      // Mon–Fri (indices 0–4)
-      for (let i = 0; i < 5; i++) SLOTS.forEach(s => next.add(`${i}-${s}`));
-    }
-    // 'none' → empty set (already empty)
-    setSelected(next);
-  };
-
-  const isDayFullySelected = (dayIdx: number) => SLOTS.every(s => selected.has(`${dayIdx}-${s}`));
-  const isDayPartial = (dayIdx: number) => !isDayFullySelected(dayIdx) && SLOTS.some(s => selected.has(`${dayIdx}-${s}`));
-  const isSlotFullySelected = (slot: Slot) => DAY_LABELS.every((_, i) => selected.has(`${i}-${slot}`));
-
-  const presets: { label: string; icon: string; preset: Preset }[] = [
-    { label: 'Full veggie week', icon: '🌿', preset: 'all' },
-    { label: 'Veggie dinners', icon: '🌙', preset: 'dinners' },
-    { label: 'Lunches & dinners', icon: '☀️', preset: 'lunches-dinners' },
-    { label: 'Weekdays only', icon: '📅', preset: 'weekdays' },
-    { label: 'No preference', icon: '✕', preset: 'none' },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full flex flex-col overflow-hidden"
-        style={{ maxWidth: '680px', maxHeight: '90vh' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-5 pb-4 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/40 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <h3 className="text-gray-900 dark:text-white" style={{ fontWeight: 700, fontSize: '1.05rem' }}>Veggie Meal Preferences</h3>
-              <p className="text-gray-400 dark:text-gray-500 text-sm mt-0.5">
-                Select which slots should use <span className="text-green-600 dark:text-green-400" style={{ fontWeight: 500 }}>plant-based recipes only</span>
-              </p>
-              <p className="text-amber-600 dark:text-amber-400 mt-1" style={{ fontSize: '0.75rem', fontWeight: 500 }}>
-                📅 {format(targetWeekStart, 'MMM d')} – {format(targetWeekEnd, 'MMM d, yyyy')}
-              </p>
-            </div>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-            <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-          </button>
-        </div>
-
-        {/* Presets */}
-        <div className="px-6 py-3 border-b border-gray-50 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-900/40">
-          <p className="text-gray-400 dark:text-gray-500 mb-2" style={{ fontSize: '0.68rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Quick Presets</p>
-          <div className="flex flex-wrap gap-2">
-            {presets.map(({ label, icon, preset }) => (
-              <button
-                key={preset}
-                onClick={() => applyPreset(preset)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-gray-700 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
-                style={{ fontSize: '0.78rem', fontWeight: 500 }}
-              >
-                <span style={{ fontSize: '0.8rem' }}>{icon}</span>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Grid */}
-        <div className="px-6 py-4 overflow-auto flex-1">
-          <div style={{ minWidth: '520px' }}>
-            {/* Day column headers */}
-            <div className="grid gap-2 mb-2" style={{ gridTemplateColumns: '110px repeat(7, 1fr)' }}>
-              <div className="flex items-end pb-1">
-                <span className="text-gray-300 dark:text-gray-600" style={{ fontSize: '0.65rem' }}>Tap to select all</span>
-              </div>
-              {DAY_LABELS.map((day, i) => {
-                const date = addDays(targetWeekStart, i);
-                const fullySelected = isDayFullySelected(i);
-                const partial = isDayPartial(i);
-                return (
-                  <button
-                    key={day}
-                    onClick={() => toggleDay(i)}
-                    title={`Toggle all meals on ${day}`}
-                    className={`flex flex-col items-center py-2 px-1 rounded-xl transition-all ${
-                      fullySelected
-                        ? 'bg-green-500 text-white shadow-sm'
-                        : partial
-                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400'
-                    }`}
-                  >
-                    <span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{day}</span>
-                    <span style={{ fontSize: '0.62rem' }} className="opacity-75">{format(date, 'MMM d')}</span>
-                    {fullySelected && <Leaf className="w-2.5 h-2.5 mt-0.5 opacity-80" />}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Slot rows */}
-            {SLOTS.map(slot => {
-              const slotFull = isSlotFullySelected(slot);
-              return (
-                <div key={slot} className="grid gap-2 mb-2" style={{ gridTemplateColumns: '110px repeat(7, 1fr)' }}>
-                  {/* Row header — click to toggle entire row */}
-                  <button
-                    onClick={() => toggleSlot(slot)}
-                    title={`Toggle ${SLOT_LABELS[slot]} for all days`}
-                    className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all text-left ${
-                      slotFull
-                        ? 'bg-green-500 text-white shadow-sm'
-                        : 'bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-700 dark:hover:text-green-400'
-                    }`}
-                  >
-                    <span style={{ fontSize: '1rem' }}>{SLOT_EMOJIS[slot]}</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{SLOT_LABELS[slot]}</span>
-                  </button>
-
-                  {/* Day cells */}
-                  {DAY_LABELS.map((_, i) => {
-                    const key = `${i}-${slot}`;
-                    const active = selected.has(key);
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => toggle(i, slot)}
-                        className={`h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all border-2 ${
-                          active
-                            ? 'bg-green-500 border-green-500 shadow-sm'
-                            : 'bg-gray-50 dark:bg-gray-700/50 border-transparent hover:border-green-300 dark:hover:border-green-700 hover:bg-green-50 dark:hover:bg-green-900/20'
-                        }`}
-                      >
-                        {active ? (
-                          <>
-                            <Leaf className="w-3.5 h-3.5 text-white" />
-                            <span className="text-white" style={{ fontSize: '0.55rem', fontWeight: 600 }}>Veggie</span>
-                          </>
-                        ) : (
-                          <div className="w-2.5 h-2.5 rounded-full bg-gray-200 dark:bg-gray-600" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-green-500 flex items-center justify-center">
-                <Leaf className="w-2.5 h-2.5 text-white" />
-              </div>
-              <span className="text-gray-500 dark:text-gray-400" style={{ fontSize: '0.72rem' }}>AI picks veggie recipe</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-4 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-500" />
-              </div>
-              <span className="text-gray-500 dark:text-gray-400" style={{ fontSize: '0.72rem' }}>AI picks freely</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer summary + actions */}
-        <div className="px-6 pb-5 pt-3 border-t border-gray-100 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-gray-400 dark:text-gray-500" style={{ fontSize: '0.78rem' }}>
-              {selected.size > 0 ? (
-                <span>
-                  <span className="text-green-600 dark:text-green-400" style={{ fontWeight: 600 }}>{selected.size} slot{selected.size !== 1 ? 's' : ''}</span>
-                  {' '}will use veggie recipes
-                </span>
-              ) : (
-                'No veggie preference — AI picks freely from all recipes'
-              )}
-            </p>
-            {selected.size > 0 && (
-              <button onClick={() => setSelected(new Set())} className="text-gray-400 hover:text-red-400 transition-colors" style={{ fontSize: '0.72rem' }}>
-                Clear all
-              </button>
-            )}
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-400 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onGenerate(selected)}
-              className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
-              style={{ fontWeight: 600 }}
-            >
-              <Sparkles className="w-4 h-4" />
-              Generate Plan
-              {selected.size > 0 && (
-                <span className="bg-white/20 px-1.5 py-0.5 rounded-full" style={{ fontSize: '0.65rem' }}>
-                  {selected.size} veggie
-                </span>
-              )}
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -473,7 +183,6 @@ function WeekView({ weekStart }: { weekStart: Date }) {
                 const dayPlan = getDayPlan(day);
                 const mealId = dayPlan?.[slot];
                 const meal = getMeal(mealId);
-                const vt = meal ? getMealVeggieType(meal) : null;
 
                 return (
                   <div
@@ -491,16 +200,6 @@ function WeekView({ weekStart }: { weekStart: Date }) {
                         <p className="text-gray-700 dark:text-gray-300 leading-tight" style={{ fontSize: '0.72rem', fontWeight: 600 }}>{meal.name}</p>
                         <div className="flex items-center gap-1 mt-auto">
                           <p className="text-gray-400 dark:text-gray-500" style={{ fontSize: '0.62rem' }}>{meal.nutritionalValue.calories} kcal</p>
-                          {vt === 'vegan' && (
-                            <span className="flex items-center gap-0.5 bg-green-100 text-green-600 px-1 rounded" style={{ fontSize: '0.55rem', fontWeight: 600 }}>
-                              <Sprout className="w-2 h-2" />V
-                            </span>
-                          )}
-                          {vt === 'vegetarian' && (
-                            <span className="flex items-center gap-0.5 bg-lime-100 text-lime-700 px-1 rounded" style={{ fontSize: '0.55rem', fontWeight: 600 }}>
-                              <Leaf className="w-2 h-2" />V
-                            </span>
-                          )}
                         </div>
                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <div className="w-5 h-5 bg-white dark:bg-gray-700 rounded-full shadow flex items-center justify-center">
@@ -612,7 +311,6 @@ export function MealPlannerPage() {
   const [showMeals, setShowMeals] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showGenMenu, setShowGenMenu] = useState(false);
-  const [veggieModal, setVeggieModal] = useState<{ weeksAhead: 0 | 1 | 2 } | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
 
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
@@ -624,16 +322,13 @@ export function MealPlannerPage() {
     else setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + dir, 1));
   };
 
-  const handleGeneratePlan = async (weeksAhead: 0 | 1 | 2, veggiePrefs: Set<string>) => {
-    setVeggieModal(null);
-      setGenerating(true);
-      try {
+  const handleGeneratePlan = async (weeksAhead: 0 | 1 | 2) => {
+    setGenerating(true);
+    try {
       const targetWeekStart = format(addWeeks(weekStart, weeksAhead), 'yyyy-MM-dd');
       const plan = await aiGenerateMealPlan(targetWeekStart);
       saveWeekPlan(plan);
-      const veggieCount = veggiePrefs.size;
-      const veggieNote = veggieCount > 0 ? ` · ${veggieCount} veggie slot${veggieCount !== 1 ? 's' : ''}` : '';
-      setSuccessMsg(`Meal plan generated for week of ${format(parseISO(targetWeekStart), 'MMM d')}!${veggieNote}`);
+      setSuccessMsg(`Meal plan generated for week of ${format(parseISO(targetWeekStart), 'MMM d')}!`);
       if (view === 'week') setCurrentDate(addWeeks(weekStart, weeksAhead));
       setTimeout(() => setSuccessMsg(''), 4000);
     } finally {
@@ -708,7 +403,7 @@ export function MealPlannerPage() {
               {(['This Week', 'Next Week', 'Week After Next'] as const).map((label, i) => (
                 <button
                   key={label}
-                  onClick={() => { setShowGenMenu(false); setVeggieModal({ weeksAhead: i as 0 | 1 | 2 }); }}
+                  onClick={() => { setShowGenMenu(false); handleGeneratePlan(i as 0 | 1 | 2); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-left transition-colors"
                 >
                   <div className="w-7 h-7 bg-violet-100 dark:bg-violet-900/40 rounded-lg flex items-center justify-center">
@@ -719,10 +414,6 @@ export function MealPlannerPage() {
                     <p className="text-gray-400 dark:text-gray-500" style={{ fontSize: '0.7rem' }}>
                       {format(addWeeks(weekStart, i), 'MMM d')} – {format(addDays(addWeeks(weekStart, i), 6), 'MMM d')}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 px-2 py-1 rounded-lg" style={{ fontSize: '0.65rem', fontWeight: 600 }}>
-                    <Leaf className="w-2.5 h-2.5" />
-                    Veggie opts
                   </div>
                 </button>
               ))}
@@ -747,7 +438,7 @@ export function MealPlannerPage() {
           <Loader2 className="w-5 h-5 text-violet-500 animate-spin flex-shrink-0" />
           <div>
             <p className="text-violet-700 text-sm" style={{ fontWeight: 600 }}>AI is crafting your meal plan...</p>
-            <p className="text-violet-400 text-xs">Balancing nutrition, variety, and your veggie preferences</p>
+            <p className="text-violet-400 text-xs">Balancing nutrition and variety</p>
           </div>
         </div>
       )}
@@ -771,27 +462,7 @@ export function MealPlannerPage() {
           <div className="w-3 h-3 rounded-full bg-amber-400" />
           <span className="text-xs text-gray-500">Today</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="flex items-center gap-0.5 bg-green-100 text-green-600 px-2 py-0.5 rounded-full" style={{ fontSize: '0.7rem' }}>
-            <Sprout className="w-2.5 h-2.5" /> Vegan
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="flex items-center gap-0.5 bg-lime-100 text-lime-700 px-2 py-0.5 rounded-full" style={{ fontSize: '0.7rem' }}>
-            <Leaf className="w-2.5 h-2.5" /> Vegetarian
-          </span>
-        </div>
       </div>
-
-      {/* Veggie Preferences Modal */}
-      {veggieModal && (
-        <VeggiePrefsModal
-          weeksAhead={veggieModal.weeksAhead}
-          weekStart={weekStart}
-          onGenerate={(prefs) => handleGeneratePlan(veggieModal.weeksAhead, prefs)}
-          onClose={() => setVeggieModal(null)}
-        />
-      )}
 
       {showGenMenu && <div className="fixed inset-0 z-10" onClick={() => setShowGenMenu(false)} />}
     </div>

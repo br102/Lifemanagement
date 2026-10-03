@@ -16,14 +16,8 @@ export function MealPlanningProfileModal({ onClose }: MealPlanningProfileModalPr
     heightCm: '',
     age: '',
     sex: '',
-    activityLevel: '',
-    fitnessGoal: '',
-    goalNotes: '',
-    dietaryPreferences: '',
-    allergies: '',
-    dislikes: '',
-    targetCalories: '',
     targetProtein: '',
+    targetCalories: '',
     targetCarbs: '',
     targetFat: '',
     mealsPerDay: '',
@@ -37,14 +31,8 @@ export function MealPlanningProfileModal({ onClose }: MealPlanningProfileModalPr
       heightCm: userProfile.heightCm?.toString() ?? '',
       age: userProfile.age?.toString() ?? '',
       sex: userProfile.sex ?? '',
-      activityLevel: userProfile.activityLevel ?? '',
-      fitnessGoal: userProfile.fitnessGoal ?? '',
-      goalNotes: userProfile.goalNotes ?? '',
-      dietaryPreferences: userProfile.dietaryPreferences?.join(', ') ?? '',
-      allergies: userProfile.allergies?.join(', ') ?? '',
-      dislikes: userProfile.dislikes?.join(', ') ?? '',
-      targetCalories: userProfile.targetCalories?.toString() ?? '',
       targetProtein: userProfile.targetProtein?.toString() ?? '',
+      targetCalories: userProfile.targetCalories?.toString() ?? '',
       targetCarbs: userProfile.targetCarbs?.toString() ?? '',
       targetFat: userProfile.targetFat?.toString() ?? '',
       mealsPerDay: userProfile.mealsPerDay?.toString() ?? '',
@@ -60,14 +48,8 @@ export function MealPlanningProfileModal({ onClose }: MealPlanningProfileModalPr
         heightCm: profileDraft.heightCm ? Number(profileDraft.heightCm) : undefined,
         age: profileDraft.age ? Number(profileDraft.age) : undefined,
         sex: profileDraft.sex || undefined,
-        activityLevel: profileDraft.activityLevel || undefined,
-        fitnessGoal: profileDraft.fitnessGoal || undefined,
-        goalNotes: profileDraft.goalNotes || undefined,
-        dietaryPreferences: profileDraft.dietaryPreferences.split(',').map((v) => v.trim()).filter(Boolean),
-        allergies: profileDraft.allergies.split(',').map((v) => v.trim()).filter(Boolean),
-        dislikes: profileDraft.dislikes.split(',').map((v) => v.trim()).filter(Boolean),
-        targetCalories: profileDraft.targetCalories ? Number(profileDraft.targetCalories) : undefined,
         targetProtein: profileDraft.targetProtein ? Number(profileDraft.targetProtein) : undefined,
+        targetCalories: profileDraft.targetCalories ? Number(profileDraft.targetCalories) : undefined,
         targetCarbs: profileDraft.targetCarbs ? Number(profileDraft.targetCarbs) : undefined,
         targetFat: profileDraft.targetFat ? Number(profileDraft.targetFat) : undefined,
         mealsPerDay: profileDraft.mealsPerDay ? Number(profileDraft.mealsPerDay) : undefined,
@@ -89,7 +71,7 @@ export function MealPlanningProfileModal({ onClose }: MealPlanningProfileModalPr
         <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
           <div>
             <h2 className="text-gray-900 dark:text-white text-xl" style={{ fontWeight: 700 }}>Meal Planning Profile</h2>
-            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">These fields help the AI shape meals around your goal, body stats, and dietary constraints.</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm mt-1">Set your body stats and nutrient goals. The meal planner uses these targets to build your weekly plan — protein is your main lever.</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
             <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
@@ -108,59 +90,66 @@ export function MealPlanningProfileModal({ onClose }: MealPlanningProfileModalPr
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-            {[
-              ['displayName', 'Display name'],
-              ['weightKg', 'Weight kg'],
-              ['heightCm', 'Height cm'],
-              ['age', 'Age'],
-              ['sex', 'Sex'],
-              ['activityLevel', 'Activity level'],
-              ['fitnessGoal', 'Fitness goal'],
-              ['targetCalories', 'Target calories'],
-              ['mealsPerDay', 'Meals/day'],
-            ].map(([key, label]) => (
-              <label key={key} className="text-sm">
-                <span className="block mb-1 text-gray-500 dark:text-gray-400 font-medium">{label}</span>
+          {/* Section 1: Body Stats */}
+          <div className="mb-8">
+            <h3 className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wide mb-3">Body Stats</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+              {[
+                ['displayName', 'Display name'],
+                ['weightKg', 'Weight (kg)'],
+                ['heightCm', 'Height (cm)'],
+                ['age', 'Age'],
+                ['sex', 'Sex'],
+                ['mealsPerDay', 'Meals/day'],
+              ].map(([key, label]) => (
+                <label key={key} className="text-sm">
+                  <span className="block mb-1 text-gray-600 dark:text-gray-300 text-xs font-medium">{label}</span>
+                  <input
+                    value={(profileDraft as any)[key]}
+                    onChange={(e) => setProfileDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 2: Nutrient Goals */}
+          <div>
+            <h3 className="text-gray-500 dark:text-gray-400 text-xs font-semibold uppercase tracking-wide mb-3">Nutrient Goals</h3>
+            <div className="space-y-3">
+              {/* Target Protein - First and Emphasized */}
+              <label className="text-sm block">
+                <div className="mb-2">
+                  <span className="block text-gray-900 dark:text-white font-semibold">Target Protein (g)</span>
+                  <span className="block text-gray-500 dark:text-gray-400 text-xs mt-1">Your main lever — update this whenever your target changes.</span>
+                </div>
                 <input
-                  value={(profileDraft as any)[key]}
-                  onChange={(e) => setProfileDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                  value={profileDraft.targetProtein}
+                  onChange={(e) => setProfileDraft((prev) => ({ ...prev, targetProtein: e.target.value }))}
                   className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  placeholder="e.g., 150"
                 />
               </label>
-            ))}
-            <label className="md:col-span-3 text-sm">
-              <span className="block mb-1 text-gray-500 dark:text-gray-400 font-medium">Goal notes</span>
-              <textarea
-                value={profileDraft.goalNotes}
-                onChange={(e) => setProfileDraft((prev) => ({ ...prev, goalNotes: e.target.value }))}
-                className="w-full min-h-[88px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                placeholder="Example: 3 training days/week, prefer simple lunches, no fish."
-              />
-            </label>
-            <label className="md:col-span-3 text-sm">
-              <span className="block mb-1 text-gray-500 dark:text-gray-400 font-medium">Dietary preferences, allergies and dislikes</span>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <input
-                  value={profileDraft.dietaryPreferences}
-                  onChange={(e) => setProfileDraft((prev) => ({ ...prev, dietaryPreferences: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="vegetarian, high protein"
-                />
-                <input
-                  value={profileDraft.allergies}
-                  onChange={(e) => setProfileDraft((prev) => ({ ...prev, allergies: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="peanuts, shellfish"
-                />
-                <input
-                  value={profileDraft.dislikes}
-                  onChange={(e) => setProfileDraft((prev) => ({ ...prev, dislikes: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
-                  placeholder="mushrooms, olives"
-                />
+
+              {/* Other nutrient goals */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                {[
+                  ['targetCalories', 'Target Calories'],
+                  ['targetCarbs', 'Target Carbs (g)'],
+                  ['targetFat', 'Target Fat (g)'],
+                ].map(([key, label]) => (
+                  <label key={key} className="text-sm">
+                    <span className="block mb-1 text-gray-600 dark:text-gray-300 text-xs font-medium">{label}</span>
+                    <input
+                      value={(profileDraft as any)[key]}
+                      onChange={(e) => setProfileDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                      className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700/50 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </label>
+                ))}
               </div>
-            </label>
+            </div>
           </div>
         </div>
 

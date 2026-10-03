@@ -26,13 +26,35 @@ export class GroceriesService {
     const mealIds = Array.from(new Set(plan.days.flatMap((d) => [d.breakfastId, d.lunchId, d.snackId, d.proteinShakeId, d.dinnerId].filter(Boolean) as string[])));
     const meals = await this.prisma.meal.findMany({ where: { id: { in: mealIds } }, include: { ingredients: { include: { ingredient: true } } } });
 
-    const accumulator = new Map<string, { quantity: number; unit: string; category: string; forMeals: string[] }>();
+    // Build a map of mealId -> date for quick lookup
+    const mealIdToDate = new Map<string, string>();
+    plan.days.forEach((d) => {
+      [d.breakfastId, d.lunchId, d.snackId, d.proteinShakeId, d.dinnerId].forEach((mealId) => {
+        if (mealId) mealIdToDate.set(mealId, d.date);
+      });
+    });
+
+    const accumulator = new Map<string, { quantity: number; unit: string; category: string; forMeals: string[]; earliestDate: string | null }>();
     meals.forEach((m) => {
+      const mealDate = mealIdToDate.get(m.id);
       m.ingredients.forEach((ing) => {
         const key = ing.ingredient.name.toLowerCase();
         const prev = accumulator.get(key);
-        if (prev) prev.forMeals.push(m.name);
-        else accumulator.set(key, { quantity: Number(ing.amount) || 1, unit: ing.unit, category: 'Pantry & Spices', forMeals: [m.name] });
+        if (prev) {
+          prev.forMeals.push(m.name);
+          // Update earliestDate if this meal's date is earlier
+          if (mealDate && (!prev.earliestDate || mealDate < prev.earliestDate)) {
+            prev.earliestDate = mealDate;
+          }
+        } else {
+          accumulator.set(key, {
+            quantity: Number(ing.amount) || 1,
+            unit: ing.unit,
+            category: 'Pantry & Spices',
+            forMeals: [m.name],
+            earliestDate: mealDate || null,
+          });
+        }
       });
     });
 
@@ -46,9 +68,30 @@ export class GroceriesService {
       include: { items: true },
     });
 
+    // Get today's date in the same format as DayPlan.date
+    const today = new Date().toISOString().split('T')[0];
+
     await this.prisma.groceryItem.createMany({
       data: Array.from(accumulator.entries()).map(([name, value]) => {
         const suggestion = meta.find((m) => m.itemName.toLowerCase() === name.toLowerCase());
+
+        // Compute buyByDate and urgency
+        let buyByDate: string | null = value.earliestDate;
+        let urgency: string | null = null;
+
+        if (buyByDate) {
+          if (buyByDate <= today) {
+            urgency = 'today';
+          } else {
+            const daysUntil = Math.floor((new Date(buyByDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
+            if (daysUntil <= 7) {
+              urgency = 'this-week';
+            } else {
+              urgency = 'anytime';
+            }
+          }
+        }
+
         return {
           groceryListId: list.id,
           name: name[0].toUpperCase() + name.slice(1),
@@ -58,6 +101,8 @@ export class GroceriesService {
           checked: false,
           recommendedPurchaseDate: suggestion?.recommendedPurchaseDate,
           estimatedExpirationDate: suggestion?.estimatedExpirationDate,
+          buyByDate,
+          urgency,
           forMeals: [...new Set(value.forMeals)],
         };
       }),

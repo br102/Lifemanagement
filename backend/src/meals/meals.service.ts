@@ -36,14 +36,8 @@ export class MealsService {
     const nutrition = hasNutrition
       ? dto.nutritionalValue
       : await this.ai.estimateNutrition(dto.name, dto.ingredients);
-    const autoTags = aiClassification
-      ? [
-          ...aiClassification.categories,
-          aiClassification.vegetarian ? 'vegetarian' : 'non-vegetarian',
-          aiClassification.lactoseFree ? 'lactose-free' : 'contains-lactose',
-        ]
-      : [];
-    const finalTags = Array.from(new Set([...(dto.tags ?? []), ...autoTags].map((tag) => tag.trim()).filter(Boolean)));
+    const aiTags = aiClassification ? aiClassification.categories : [];
+    const finalTags = Array.from(new Set([...(dto.tags ?? []), ...aiTags].map((tag) => tag.trim()).filter(Boolean)));
 
     const meal = await this.prisma.$transaction(async (tx) => {
       const categoryRow = await tx.mealCategory.upsert({ where: { name: category }, create: { name: category }, update: {} });

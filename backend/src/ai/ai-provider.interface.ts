@@ -3,8 +3,6 @@ export interface MealClassification {
   categories: string[];
   category: string;
   types: string[];
-  vegetarian: boolean;
-  lactoseFree: boolean;
 }
 
 export interface NutritionResult {
@@ -26,12 +24,6 @@ export interface PlannerInput {
     heightCm?: number | null;
     age?: number | null;
     sex?: string | null;
-    activityLevel?: string | null;
-    fitnessGoal?: string | null;
-    goalNotes?: string | null;
-    dietaryPreferences?: string[];
-    allergies?: string[];
-    dislikes?: string[];
     targetCalories?: number | null;
     targetProtein?: number | null;
     targetCarbs?: number | null;

@@ -10,14 +10,12 @@ export class OpenAiProvider implements AiProvider {
   async classifyMeal(name: string, ingredients: string[]): Promise<MealClassification> {
     // eslint-disable-next-line no-console
     console.log('[AI][OpenAI] classifyMeal called', { name, ingredientCount: ingredients.length });
-    const prompt = `Classify this meal focusing on cuisine/style and dietary properties.
+    const prompt = `Classify this meal focusing on cuisine/style and meal type.
 Return strict JSON object:
-{"primaryCategory":"string","categories":["string", ...],"types":["Breakfast"|"Lunch"|"Dinner"|"Snack"|"Protein Shake", ...],"vegetarian":true|false,"lactoseFree":true|false}
+{"primaryCategory":"string","categories":["string", ...],"types":["Breakfast"|"Lunch"|"Dinner"|"Snack"|"Protein Shake", ...]}
 Rules:
 - primaryCategory should be cuisine/style (examples: "Spanish", "Italian", "Mexican", "Mediterranean", "Asian").
 - categories should include primaryCategory plus complementary labels (for example "Traditional", "Home Cooking", "High Protein", etc.) when they are strongly applicable.
-- vegetarian=true only if no meat/fish/seafood is present.
-- lactoseFree=true only if no dairy/lactose ingredients are present.
 Meal: ${name}
 Ingredients: ${ingredients.join(', ')}`;
     const json = await this.askJson(prompt);
@@ -43,8 +41,6 @@ Ingredients: ${ingredients.join(', ')}`;
       categories,
       category: primaryCategory,
       types,
-      vegetarian: this.requiredBoolean(json, 'vegetarian'),
-      lactoseFree: this.requiredBoolean(json, 'lactoseFree'),
     };
   }
 
@@ -155,12 +151,10 @@ Use only meal IDs from this pool:
 ${JSON.stringify(mealPool)}
 ${profileBlock}
 Goal:
-- Optimize for the user's fitness goal and dietary profile.
-- Prefer meals that help hit calorie and macro targets if they are available.
-- Respect allergies, dislikes, and dietary preferences.
+- Primary objective: hit targetProtein every day — distribute protein across breakfast/lunch/snack/proteinShake/dinner slots so the daily total stays as close as possible to the target without large misses.
+- Secondary: stay close to targetCalories/targetCarbs/targetFat for balance.
+- If no targets are set, just build a balanced, varied week.
 - Keep variety across the week, but allow smart repetition for meal prep efficiency.
-- Include enough protein distribution for the full day.
-- If the profile suggests fat loss, use a modest deficit; if muscle gain, bias toward higher protein and adequate calories; if maintenance, keep calories steady.
 - Favor meals with better scores when multiple options fit equally well.
 - Leave a slot null if no meal in the pool is a good fit.`;
     const json = await this.askJson(prompt);

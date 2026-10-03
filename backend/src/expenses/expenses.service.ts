@@ -87,6 +87,7 @@ export class ExpensesService {
   }
 
   async getMealCosts(userId: string) {
+    // Fetch all meals with their ingredients
     const meals = await this.prisma.meal.findMany({
       where: { userId },
       include: {
@@ -95,8 +96,23 @@ export class ExpensesService {
       },
     });
 
+    // Fetch latest ingredient prices per ingredientId in a single query
+    const latestPrices = await this.prisma.ingredientPrice.findMany({
+      where: { userId },
+      distinct: ['ingredientId'],
+      orderBy: { purchaseDate: 'desc' },
+    });
+
+    // Create a map of ingredientId -> latest price
+    const priceMap = new Map<string, any>();
+    latestPrices.forEach((price) => {
+      if (!priceMap.has(price.ingredientId)) {
+        priceMap.set(price.ingredientId, price);
+      }
+    });
+
     return meals.map((meal) => {
-      const { estimatedCost, missingIngredients } = this.calculateMealCost(meal, userId);
+      const { estimatedCost, missingIngredients } = this.calculateMealCost(meal, priceMap);
       return {
         mealId: meal.id,
         mealName: meal.name,
@@ -170,7 +186,7 @@ export class ExpensesService {
     return (normalizedQty / normalizedPrice) * unitPrice;
   }
 
-  private calculateMealCost(meal: any, userId: string): { estimatedCost: number; missingIngredients: string[] } {
+  private calculateMealCost(meal: any, priceMap: Map<string, any>): { estimatedCost: number; missingIngredients: string[] } {
     let estimatedCost = 0;
     const missingIngredients: string[] = [];
 
@@ -196,9 +212,24 @@ export class ExpensesService {
         continue;
       }
 
-      // Sync prisma query: find latest price for this ingredient
-      // This is a limitation — in real code you'd prefetch this data
-      missingIngredients.push(mealIng.ingredient.name);
+      // Look up latest price for this ingredient from the map
+      const latestPrice = priceMap.get(mealIng.ingredientId);
+      if (!latestPrice) {
+        missingIngredients.push(mealIng.ingredient.name);
+        continue;
+      }
+
+      // Extract unit from the amount string (e.g., "200g" -> "g", "2 cups" -> "cups")
+      const unitMatch = (mealIng.amount as string).match(/([a-zA-Z]+)$/);
+      const unit = unitMatch ? unitMatch[1] : mealIng.unit;
+
+      // Calculate cost using the helper
+      const itemCost = this.calculateItemCost(quantity, unit, latestPrice.unitPrice, latestPrice.unit);
+      if (itemCost === null) {
+        missingIngredients.push(mealIng.ingredient.name);
+      } else {
+        estimatedCost += itemCost;
+      }
     }
 
     return { estimatedCost, missingIngredients };

@@ -25,12 +25,6 @@ model User {
   heightCm         Float?
   age              Int?
   sex              String?
-  activityLevel    String?
-  fitnessGoal      String?
-  goalNotes        String?
-  dietaryPreferences String[]
-  allergies        String[]
-  dislikes         String[]
   targetCalories   Int?
   targetProtein    Int?
   targetCarbs      Int?

@@ -110,15 +110,11 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
       const result = await aiCategorize(watchedName, ingredients);
       setValue('category', result.primaryCategory || result.category);
       setValue('types', result.types);
-      const dietaryTags = [
-        result.vegetarian ? 'vegetarian' : 'non-vegetarian',
-        result.lactoseFree ? 'lactose-free' : 'contains-lactose',
-      ];
       const currentTags = (watchedTags || '')
         .split(',')
         .map((item) => item.trim())
         .filter(Boolean);
-      const nextTags = Array.from(new Set([...currentTags, ...(result.categories || []), ...dietaryTags]));
+      const nextTags = Array.from(new Set([...currentTags, ...(result.categories || [])]));
       setValue('tags', nextTags.join(', '));
     } finally {
       setAiLoading(null);
@@ -327,7 +323,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Tags (comma separated)</label>
-                  <input {...register('tags')} placeholder="e.g. vegetarian, lactose-free, high-protein" className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
+                  <input {...register('tags')} placeholder="e.g. high-protein, meal-prep, quick" className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Recipe Link</label>

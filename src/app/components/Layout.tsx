@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router';
-import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkles, Menu, X, Leaf, Moon, Sun, LogOut } from 'lucide-react';
+import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkles, Menu, X, Moon, Sun, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { path: '/meals', label: 'Meals', icon: ChefHat },
   { path: '/planner', label: 'Meal Planner', icon: CalendarDays },
   { path: '/groceries', label: 'Groceries', icon: ShoppingCart },
-  { path: '/veggies', label: 'Veggie Recipes', icon: Leaf },
   { path: '/expenses', label: 'Expenses', icon: CreditCard },
   { path: '/exercise', label: 'Exercise', icon: Dumbbell },
   { path: '/letters', label: 'Letters', icon: Sparkles },
@@ -28,7 +27,6 @@ export function Layout() {
     '/meals': 'My Meals',
     '/planner': 'Meal Planner',
     '/groceries': 'Grocery List',
-    '/veggies': 'Veggie Recipes',
     '/expenses': 'Expenses',
     '/exercise': 'Training',
     '/letters': 'Letters',
