@@ -1,6 +1,5 @@
 # Backend Integration Notes
 
-
 ## Frontend contract discovered
 - Meal shape: `id,name,score,category,types[],ingredients[],steps[],link,nutritionalValue,image,aiCategorized,aiNutrition,prepTime,cookTime,servings,tags,createdAt`
 - Week plan shape: `id,startDate,days[{date,breakfast,lunch,snack,proteinShake,dinner}],aiGenerated`
