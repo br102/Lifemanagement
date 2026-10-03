@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { path: '/groceries', label: 'Groceries', icon: ShoppingCart },
   { path: '/expenses', label: 'Expenses', icon: CreditCard },
   { path: '/exercise', label: 'Exercise', icon: Dumbbell },
-  { path: '/letters', label: 'Letters', icon: Sparkles },
 ];
 
 export function Layout() {
@@ -29,7 +28,6 @@ export function Layout() {
     '/groceries': 'Grocery List',
     '/expenses': 'Expenses',
     '/exercise': 'Training',
-    '/letters': 'Letters',
   };
   const currentTitle = pageTitles[location.pathname] || 'LifeHub';
 
