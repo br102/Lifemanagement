@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router';
-import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkles, Menu, X, Moon, Sun, LogOut } from 'lucide-react';
+import { Home, ChefHat, CalendarDays, ShoppingCart, CreditCard, Dumbbell, Sparkles, Menu, X, Moon, Sun, LogOut, CalendarRange } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useApp } from '../context/AppContext';
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { path: '/groceries', label: 'Groceries', icon: ShoppingCart },
   { path: '/expenses', label: 'Expenses', icon: CreditCard },
   { path: '/exercise', label: 'Exercise', icon: Dumbbell },
+  { path: '/calendar', label: 'Calendar', icon: CalendarRange },
 ];
 
 export function Layout() {
@@ -28,6 +29,7 @@ export function Layout() {
     '/groceries': 'Grocery List',
     '/expenses': 'Expenses',
     '/exercise': 'Training',
+    '/calendar': 'Calendar',
   };
   const currentTitle = pageTitles[location.pathname] || 'LifeHub';
 

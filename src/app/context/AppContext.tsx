@@ -16,6 +16,9 @@ import type {
   MealCostEstimate,
   GroceryEstimate,
   ReceiptLineItem,
+  CalendarEvent,
+  Schedule,
+  ScheduleOccurrence,
 } from '../types';
 
 interface AppContextType {
@@ -27,6 +30,9 @@ interface AppContextType {
   trainingDays: TrainingDay[];
   workoutSessions: WorkoutSession[];
   trainingBalance: TrainingBalance | null;
+  calendarEvents: CalendarEvent[];
+  schedules: Schedule[];
+  scheduleOccurrences: ScheduleOccurrence[];
   isAuthenticated: boolean;
   authLoading: boolean;
   currentUserName: string | null;
@@ -82,6 +88,13 @@ interface AppContextType {
   loadIngredientPrices: () => Promise<IngredientPrice[]>;
   loadMealCosts: () => Promise<MealCostEstimate[]>;
   getGroceryEstimate: (weekStartDate: string) => Promise<GroceryEstimate>;
+  saveCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CalendarEvent>;
+  deleteCalendarEvent: (id: string) => Promise<void>;
+  saveSchedule: (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Schedule>;
+  deleteSchedule: (id: string) => Promise<void>;
+  completeSchedule: (occurrenceId: string) => Promise<void>;
+  setScheduleOverride: (occurrenceId: string, overrideStatus: boolean) => Promise<void>;
+  loadCalendarRange: (from: string, to: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -172,6 +185,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [trainingDays, setTrainingDays] = useState<TrainingDay[]>([]);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSession[]>([]);
   const [trainingBalance, setTrainingBalance] = useState<TrainingBalance | null>(null);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [scheduleOccurrences, setScheduleOccurrences] = useState<ScheduleOccurrence[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [currentUserName, setCurrentUserName] = useState<string | null>(null);
@@ -251,7 +267,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrainingDays(daysRes || []);
     setWorkoutSessions(sessionsRes || []);
     setTrainingBalance(balanceRes || null);
-  }, [loadWeekPlan, loadGrocery]);
+
+    // Load initial calendar range (this month)
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+    await loadCalendarRange(monthStart, monthEnd);
+  }, [loadWeekPlan, loadGrocery, loadCalendarRange]);
 
   useEffect(() => {
     (async () => {
@@ -316,6 +337,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrainingDays([]);
     setWorkoutSessions([]);
     setTrainingBalance(null);
+    setCalendarEvents([]);
+    setSchedules([]);
+    setScheduleOccurrences([]);
     setIsAuthenticated(false);
     setCurrentUserName(null);
   }, []);
@@ -483,6 +507,78 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return balance as TrainingBalance;
   }, []);
 
+  const loadCalendarRange = useCallback(async (from: string, to: string) => {
+    const [eventsRes, schedulesRes, occurrencesRes] = await Promise.all([
+      authFetch(`/calendar/events?from=${from}&to=${to}`),
+      authFetch(`/calendar/schedules`),
+      authFetch(`/calendar/schedules/occurrences?from=${from}&to=${to}`),
+    ]);
+    setCalendarEvents(eventsRes || []);
+    setSchedules(schedulesRes || []);
+    setScheduleOccurrences(occurrencesRes || []);
+
+    // Ensure training data is available
+    await loadTrainingRange(from, to);
+
+    // Ensure meal data is available
+    await loadRelevantWeekPlans(from, to);
+  }, []);
+
+  const loadRelevantWeekPlans = useCallback(async (from: string, to: string) => {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const weekStarts: string[] = [];
+
+    let current = new Date(fromDate);
+    current.setDate(current.getDate() - (current.getDay() === 0 ? 6 : current.getDay() - 1));
+
+    while (current <= toDate) {
+      weekStarts.push(current.toISOString().slice(0, 10));
+      current.setDate(current.getDate() + 7);
+    }
+
+    for (const weekStart of weekStarts) {
+      await loadWeekPlan(weekStart);
+      await loadGrocery(weekStart);
+    }
+  }, [loadWeekPlan, loadGrocery]);
+
+  const saveCalendarEvent = useCallback(async (eventData: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const created = await authFetch('/calendar/events', { method: 'POST', body: JSON.stringify(eventData) });
+    setCalendarEvents((prev) => [created as CalendarEvent, ...prev].sort((a, b) => a.startDate.localeCompare(b.startDate)));
+    return created as CalendarEvent;
+  }, []);
+
+  const deleteCalendarEvent = useCallback(async (id: string) => {
+    await authFetch(`/calendar/events/${id}`, { method: 'DELETE' });
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
+  const saveSchedule = useCallback(async (scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const created = await authFetch('/calendar/schedules', { method: 'POST', body: JSON.stringify(scheduleData) });
+    setSchedules((prev) => [created as Schedule, ...prev].sort((a, b) => a.title.localeCompare(b.title)));
+    return created as Schedule;
+  }, []);
+
+  const deleteSchedule = useCallback(async (id: string) => {
+    await authFetch(`/calendar/schedules/${id}`, { method: 'DELETE' });
+    setSchedules((prev) => prev.filter((s) => s.id !== id));
+    setScheduleOccurrences((prev) => prev.filter((o) => o.scheduleId !== id));
+  }, []);
+
+  const completeSchedule = useCallback(async (occurrenceId: string) => {
+    const updated = await authFetch(`/calendar/schedules/occurrences/${occurrenceId}/complete`, { method: 'PATCH' });
+    setScheduleOccurrences((prev) => prev.map((o) => (o.id === occurrenceId ? updated as ScheduleOccurrence : o)));
+  }, []);
+
+  const setScheduleOverride = useCallback(async (occurrenceId: string, overrideStatus: boolean) => {
+    const updated = await authFetch(`/calendar/schedules/occurrences/${occurrenceId}/override`, {
+      method: 'PATCH',
+      body: JSON.stringify({ overrideStatus }),
+    });
+    setScheduleOccurrences((prev) => prev.map((o) => (o.id === occurrenceId ? updated as ScheduleOccurrence : o)));
+  }, []);
+
   const uploadReceiptImage = useCallback(async (file: File) => {
     const token = getStoredValue(ACCESS_TOKEN_KEY);
     const formData = new FormData();
@@ -547,6 +643,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         trainingDays,
         workoutSessions,
         trainingBalance,
+        calendarEvents,
+        schedules,
+        scheduleOccurrences,
         isAuthenticated,
         authLoading,
         currentUserName,
@@ -584,6 +683,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loadIngredientPrices,
         loadMealCosts,
         getGroceryEstimate,
+        saveCalendarEvent,
+        deleteCalendarEvent,
+        saveSchedule,
+        deleteSchedule,
+        completeSchedule,
+        setScheduleOverride,
+        loadCalendarRange,
       }}
     >
       {children}

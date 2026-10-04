@@ -202,3 +202,42 @@ export interface GroceryEstimate {
   currency: string;
   missingItems: string[];
 }
+
+export type CalendarCategory = 'office' | 'training' | 'meals' | 'chores' | 'events';
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  category: CalendarCategory;
+  location?: string;
+  allDay?: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Schedule {
+  id: string;
+  title: string;
+  description?: string;
+  category: CalendarCategory;
+  recurrencePattern?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleOccurrence {
+  id: string;
+  scheduleId: string;
+  date: string;
+  completed: boolean;
+  completedAt?: string;
+  overrideStatus?: boolean;
+  createdAt: string;
+}
