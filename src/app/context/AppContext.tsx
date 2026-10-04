@@ -230,6 +230,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (list) saveGroceryList(list);
   }, [saveGroceryList]);
 
+  const loadRelevantWeekPlans = useCallback(async (from: string, to: string) => {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const weekStarts: string[] = [];
+
+    let current = new Date(fromDate);
+    current.setDate(current.getDate() - (current.getDay() === 0 ? 6 : current.getDay() - 1));
+
+    while (current <= toDate) {
+      weekStarts.push(current.toISOString().slice(0, 10));
+      current.setDate(current.getDate() + 7);
+    }
+
+    for (const weekStart of weekStarts) {
+      await loadWeekPlan(weekStart);
+      await loadGrocery(weekStart);
+    }
+  }, [loadWeekPlan, loadGrocery]);
+
+  const loadCalendarRange = useCallback(async (from: string, to: string) => {
+    const [eventsRes, schedulesRes, occurrencesRes] = await Promise.all([
+      authFetch(`/calendar/events?from=${from}&to=${to}`),
+      authFetch(`/calendar/schedules`),
+      authFetch(`/calendar/schedules/occurrences?from=${from}&to=${to}`),
+    ]);
+    setCalendarEvents(eventsRes || []);
+    setSchedules(schedulesRes || []);
+    setScheduleOccurrences(occurrencesRes || []);
+
+    // Ensure training data is available
+    await loadTrainingRange(from, to);
+
+    // Ensure meal data is available
+    await loadRelevantWeekPlans(from, to);
+  }, [loadRelevantWeekPlans]);
+
   const loadInitialData = useCallback(async () => {
     const mealsRes = await authFetch('/meals');
     setMeals(mealsRes || []);
@@ -506,42 +542,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTrainingBalance(balance as TrainingBalance);
     return balance as TrainingBalance;
   }, []);
-
-  const loadCalendarRange = useCallback(async (from: string, to: string) => {
-    const [eventsRes, schedulesRes, occurrencesRes] = await Promise.all([
-      authFetch(`/calendar/events?from=${from}&to=${to}`),
-      authFetch(`/calendar/schedules`),
-      authFetch(`/calendar/schedules/occurrences?from=${from}&to=${to}`),
-    ]);
-    setCalendarEvents(eventsRes || []);
-    setSchedules(schedulesRes || []);
-    setScheduleOccurrences(occurrencesRes || []);
-
-    // Ensure training data is available
-    await loadTrainingRange(from, to);
-
-    // Ensure meal data is available
-    await loadRelevantWeekPlans(from, to);
-  }, []);
-
-  const loadRelevantWeekPlans = useCallback(async (from: string, to: string) => {
-    const fromDate = new Date(from);
-    const toDate = new Date(to);
-    const weekStarts: string[] = [];
-
-    let current = new Date(fromDate);
-    current.setDate(current.getDate() - (current.getDay() === 0 ? 6 : current.getDay() - 1));
-
-    while (current <= toDate) {
-      weekStarts.push(current.toISOString().slice(0, 10));
-      current.setDate(current.getDate() + 7);
-    }
-
-    for (const weekStart of weekStarts) {
-      await loadWeekPlan(weekStart);
-      await loadGrocery(weekStart);
-    }
-  }, [loadWeekPlan, loadGrocery]);
 
   const saveCalendarEvent = useCallback(async (eventData: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => {
     const created = await authFetch('/calendar/events', { method: 'POST', body: JSON.stringify(eventData) });
