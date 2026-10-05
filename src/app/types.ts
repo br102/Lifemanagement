@@ -1,4 +1,5 @@
 export type MealType = 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Protein Shake';
+export type DesiredFrequency = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'OCCASIONAL' | 'SPECIAL';
 
 export interface Ingredient {
   id: string;
@@ -21,6 +22,7 @@ export interface Meal {
   id: string;
   name: string;
   score: number;
+  desiredFrequency: DesiredFrequency;
   category: string;
   types: MealType[];
   ingredients: Ingredient[];
@@ -35,6 +37,7 @@ export interface Meal {
   servings?: number;
   tags?: string[];
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface DayPlan {

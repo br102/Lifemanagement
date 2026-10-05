@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { X, Plus, Trash2, Sparkles, Loader2, ExternalLink, Star } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { Meal, MealType, NutritionalValue, Ingredient } from '../../types';
+import type { Meal, MealType, NutritionalValue, Ingredient, DesiredFrequency } from '../../types';
 
 interface FormValues {
   name: string;
   image: string;
   score: number;
+  desiredFrequency: DesiredFrequency;
   types: MealType[];
   category: string;
   tags: string;
@@ -49,7 +50,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<FormValues>({
     defaultValues: meal ? {
-      name: meal.name, image: meal.image || '', score: meal.score,
+      name: meal.name, image: meal.image || '', score: meal.score, desiredFrequency: meal.desiredFrequency,
       types: meal.types, category: meal.category, tags: meal.tags?.join(', ') || '',
       prepTime: meal.prepTime || 0, cookTime: meal.cookTime || 0, servings: meal.servings || 2,
       ingredients: meal.ingredients.map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),
@@ -58,7 +59,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
       carbs: meal.nutritionalValue.carbs, fat: meal.nutritionalValue.fat,
       fiber: meal.nutritionalValue.fiber, sugar: meal.nutritionalValue.sugar, sodium: meal.nutritionalValue.sodium,
     } : {
-      name: '', image: '', score: 4, types: [], category: '', tags: '',
+      name: '', image: '', score: 4, desiredFrequency: 'WEEKLY', types: [], category: '', tags: '',
       prepTime: 0, cookTime: 0, servings: 2,
       ingredients: [{ name: '', amount: '', unit: '' }],
       steps: [{ text: '' }],
@@ -153,7 +154,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
       id: `ing-${i}`, name: ing.name, amount: ing.amount, unit: ing.unit,
     }));
     const mealData = {
-      name: data.name, image: data.image || undefined, score: Number(data.score),
+      name: data.name, image: data.image || undefined, score: Number(data.score), desiredFrequency: data.desiredFrequency,
       types: data.types, category: data.category,
       tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
       prepTime: Number(data.prepTime) || undefined, cookTime: Number(data.cookTime) || undefined,
@@ -284,6 +285,16 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
                       </button>
                     ))}
                   </div>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Desired Frequency</label>
+                  <select {...register('desiredFrequency')} className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                    <option value="WEEKLY">Weekly</option>
+                    <option value="BIWEEKLY">Biweekly</option>
+                    <option value="MONTHLY">Monthly</option>
+                    <option value="OCCASIONAL">Occasional</option>
+                    <option value="SPECIAL">Special</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 dark:text-gray-300 mb-2">Meal Types</label>

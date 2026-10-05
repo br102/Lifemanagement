@@ -62,6 +62,11 @@ export class MealsController {
     return this.mealsService.aiDraftFromLink(dto.link);
   }
 
+  @Post('import')
+  importMeals(@CurrentUser() user: { userId: string }, @Body() dtos: CreateMealDto[]) {
+    return this.mealsService.importMeals(user.userId, dtos);
+  }
+
   @Patch(':id')
   update(@CurrentUser() user: { userId: string }, @Param('id') id: string, @Body() dto: UpdateMealDto) {
     return this.mealsService.update(user.userId, id, dto);

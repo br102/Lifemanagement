@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
-import { Prisma, MealType } from '@prisma/client';
+import { Prisma, MealType, DesiredFrequency } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { CreateMealDto } from './dto/create-meal.dto';
 import { UpdateMealDto } from './dto/update-meal.dto';
@@ -46,6 +46,7 @@ export class MealsService {
           userId,
           name: dto.name,
           score: dto.score,
+          desiredFrequency: dto.desiredFrequency ?? 'WEEKLY',
           categoryId: categoryRow.id,
           link: dto.link,
           image: dto.image,
@@ -86,10 +87,23 @@ export class MealsService {
     return this.ai.draftMealFromLink(link);
   }
 
+  async importMeals(userId: string, dtos: CreateMealDto[]) {
+    const results = [];
+    for (const dto of dtos) {
+      try {
+        const meal = await this.create(userId, dto);
+        results.push({ success: true, meal });
+      } catch (error) {
+        results.push({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    }
+    return { imported: results.filter((r) => r.success).length, failed: results.filter((r) => !r.success).length, results };
+  }
+
   async update(userId: string, id: string, dto: UpdateMealDto) {
     const existing = await this.prisma.meal.findFirst({ where: { id, userId } });
     if (!existing) throw new NotFoundException('Meal not found');
-    await this.prisma.meal.update({ where: { id }, data: { name: dto.name, score: dto.score, link: dto.link, image: dto.image, prepTime: dto.prepTime, cookTime: dto.cookTime, servings: dto.servings } });
+    await this.prisma.meal.update({ where: { id }, data: { name: dto.name, score: dto.score, desiredFrequency: dto.desiredFrequency, link: dto.link, image: dto.image, prepTime: dto.prepTime, cookTime: dto.cookTime, servings: dto.servings } });
     return this.findById(userId, id);
   }
 
@@ -124,6 +138,7 @@ export class MealsService {
     id: meal.id,
     name: meal.name,
     score: meal.score,
+    desiredFrequency: meal.desiredFrequency,
     category: meal.category?.name ?? 'Healthy',
     types: meal.types.map((t: any) => {
       const typeMap: Record<string, string> = {

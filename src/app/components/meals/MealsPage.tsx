@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Star, Clock, Flame, ChefHat, Eye, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Search, Star, Clock, Flame, ChefHat, Eye, Pencil, Trash2, X, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import type { Meal, MealType } from '../../types';
 import { MealDetailModal } from './MealDetailModal';
@@ -96,6 +96,9 @@ export function MealsPage() {
   const [editMeal, setEditMeal] = useState<Meal | null | 'new'>('new' as const);
   const [showAdd, setShowAdd] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJson, setImportJson] = useState('');
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
 
   const filtered = useMemo(() => {
     let result = [...meals];
@@ -110,6 +113,41 @@ export function MealsPage() {
     return result;
   }, [meals, search, typeFilter, sortBy]);
 
+  const handleImportMeals = async () => {
+    try {
+      const mealsToImport = JSON.parse(importJson);
+      const mealsArray = Array.isArray(mealsToImport) ? mealsToImport : [mealsToImport];
+
+      const token = localStorage.getItem('lm_access_token') ?? sessionStorage.getItem('lm_access_token');
+      const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+
+      const response = await fetch(`${API_URL}/meals/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(mealsArray),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Import failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      setImportStatus({ type: 'success', message: `Successfully imported ${result.imported} meal(s)${result.failed > 0 ? ` (${result.failed} failed)` : ''}` });
+      setImportJson('');
+
+      setTimeout(() => {
+        setShowImportModal(false);
+        setImportStatus({ type: null, message: '' });
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      setImportStatus({ type: 'error', message: error instanceof Error ? error.message : 'Invalid JSON format' });
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -119,12 +157,20 @@ export function MealsPage() {
             {filtered.length} meal{filtered.length !== 1 ? 's' : ''} in your collection
           </p>
         </div>
-        <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-white rounded-xl shadow-sm transition-colors"
-          style={{ fontWeight: 600, fontSize: '0.875rem' }}>
-          <Plus className="w-4 h-4" />
-          Add Meal
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowImportModal(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl shadow-sm transition-colors"
+            style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+            <Upload className="w-4 h-4" />
+            Import JSON
+          </button>
+          <button onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-amber-400 hover:bg-amber-500 text-white rounded-xl shadow-sm transition-colors"
+            style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+            <Plus className="w-4 h-4" />
+            Add Meal
+          </button>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -219,6 +265,74 @@ export function MealsPage() {
           onClose={() => { setShowAdd(false); setEditMeal('new'); }}
           onSaved={() => { setShowAdd(false); setEditMeal('new'); }}
         />
+      )}
+
+      {/* Import JSON Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setShowImportModal(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-transparent dark:border-gray-800" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
+              <h2 className="text-gray-900 dark:text-gray-100" style={{ fontSize: '1.125rem', fontWeight: 700 }}>
+                Import Meals from JSON
+              </h2>
+              <button onClick={() => setShowImportModal(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-900/50">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Paste a JSON array of meal objects. Each meal should have: name, score, types, ingredients, steps, nutritionalValue, and optionally: desiredFrequency, category, tags, link, image, prepTime, cookTime, servings.
+                </p>
+              </div>
+
+              <textarea
+                value={importJson}
+                onChange={e => setImportJson(e.target.value)}
+                placeholder='[{"name":"Pasta","score":4,"desiredFrequency":"WEEKLY","types":["Lunch"],"ingredients":[{"name":"pasta","amount":"200","unit":"g"}],"steps":["Cook pasta"],"nutritionalValue":{"calories":300,"protein":10,"carbs":60,"fat":2,"fiber":2,"sugar":0,"sodium":500}}]'
+                className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 font-mono resize-none"
+                rows={10}
+              />
+
+              {importStatus.type && (
+                <div className={`p-3 rounded-lg border flex gap-2 ${importStatus.type === 'success' ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900/50' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50'}`}>
+                  {importStatus.type === 'success' ? (
+                    <>
+                      <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                      <p className={`text-sm ${importStatus.type === 'success' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>{importStatus.message}</p>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700 dark:text-red-300">{importStatus.message}</p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6 flex gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowImportModal(false)}
+                className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-600 dark:text-gray-300 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImportMeals}
+                disabled={!importJson.trim()}
+                className="flex-1 py-2.5 bg-amber-400 rounded-xl text-white text-sm hover:bg-amber-500 transition-colors disabled:opacity-50"
+                style={{ fontWeight: 600 }}
+              >
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsArray, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsOptional, IsString, Max, Min, ValidateNested } from 'class-validator';
+import { DesiredFrequency } from '@prisma/client';
 
 class IngredientDto {
   @IsString() name!: string;
@@ -20,6 +21,7 @@ class NutritionDto {
 export class CreateMealDto {
   @IsString() name!: string;
   @IsInt() @Min(1) @Max(5) score!: number;
+  @IsOptional() @IsEnum(DesiredFrequency) desiredFrequency?: DesiredFrequency;
   @IsOptional() @IsString() category?: string;
   @IsArray() @IsString({ each: true }) types!: string[];
   @ValidateNested({ each: true }) @Type(() => IngredientDto) ingredients!: IngredientDto[];

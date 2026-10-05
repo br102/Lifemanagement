@@ -139,7 +139,7 @@ Link: ${link}`;
   }
 
   async generateWeekPlan(input: PlannerInput): Promise<Record<string, Partial<Record<'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', string>>>> {
-    const mealPool = input.meals.map((m) => ({ id: m.id, name: m.name, types: m.types }));
+    const mealPool = input.meals.map((m) => ({ id: m.id, name: m.name, types: m.types, desiredFrequency: m.desiredFrequency, score: m.score }));
     const profileBlock = input.profile
       ? `User profile:
 ${JSON.stringify(input.profile, null, 2)}`
@@ -155,6 +155,7 @@ Goal:
 - Secondary: stay close to targetCalories/targetCarbs/targetFat for balance.
 - If no targets are set, just build a balanced, varied week.
 - Keep variety across the week, but allow smart repetition for meal prep efficiency.
+- Respect desiredFrequency: WEEKLY meals should appear ~1x/week, BIWEEKLY ~1x/2weeks, MONTHLY ~1x/month, OCCASIONAL 0-1x/week, SPECIAL rare.
 - Favor meals with better scores when multiple options fit equally well.
 - Leave a slot null if no meal in the pool is a good fit.`;
     const json = await this.askJson(prompt);

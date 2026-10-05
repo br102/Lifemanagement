@@ -15,6 +15,14 @@ enum MealType {
   PROTEIN_SHAKE
 }
 
+enum DesiredFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  OCCASIONAL
+  SPECIAL
+}
+
 model User {
   id               String   @id @default(cuid())
   email            String   @unique
@@ -51,6 +59,7 @@ model Meal {
   userId      String
   name        String
   score       Int
+  desiredFrequency DesiredFrequency @default(WEEKLY)
   categoryId  String?
   link        String?
   image       String?
