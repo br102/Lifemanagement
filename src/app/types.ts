@@ -244,3 +244,27 @@ export interface ScheduleOccurrence {
   overrideStatus?: boolean;
   createdAt: string;
 }
+
+export interface NutritionLogEntry {
+  id: string;
+  date: string;
+  mealId?: string;
+  mealType?: MealType;
+  label: string;
+  quantity: number;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  notes?: string;
+  loggedAt: string;
+  createdAt: string;
+}
+
+export interface DailyNutritionSummary {
+  date: string;
+  entries: NutritionLogEntry[];
+  totals: { calories: number; protein: number; carbs: number; fat: number };
+  targets: { calories?: number; protein?: number; carbs?: number; fat?: number };
+  remaining: { calories: number; protein: number; carbs: number; fat: number };
+}

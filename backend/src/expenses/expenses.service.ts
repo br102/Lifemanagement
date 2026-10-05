@@ -15,46 +15,49 @@ export class ExpensesService {
   }
 
   async confirmReceipt(userId: string, dto: ConfirmReceiptDto) {
-    const receipt = await this.prisma.$transaction(async (tx) => {
-      const r = await tx.receipt.create({
-        data: {
-          userId,
-          store: dto.store,
-          imageUrl: dto.imageUrl,
-          purchaseDate: dto.purchaseDate,
-          totalAmount: dto.totalAmount,
-          currency: dto.currency || 'PLN',
-        },
-      });
-
-      for (const item of dto.items) {
-        const ingredient = await tx.ingredient.upsert({
-          where: { name: item.name },
-          create: { name: item.name },
-          update: {},
-        });
-
-        const unitPrice = this.calculateUnitPrice(item.quantity, item.unit, item.price);
-        await tx.ingredientPrice.create({
+    const receipt = await this.prisma.$transaction(
+      async (tx) => {
+        const r = await tx.receipt.create({
           data: {
             userId,
-            ingredientId: ingredient.id,
-            receiptId: r.id,
-            price: item.price,
-            quantity: item.quantity,
-            unit: item.unit,
-            unitPrice,
-            currency: r.currency,
-            purchaseDate: r.purchaseDate,
+            store: dto.store,
+            imageUrl: dto.imageUrl,
+            purchaseDate: dto.purchaseDate,
+            totalAmount: dto.totalAmount,
+            currency: dto.currency || 'PLN',
           },
         });
-      }
 
-      return tx.receipt.findUniqueOrThrow({
-        where: { id: r.id },
-        include: { prices: { include: { ingredient: true } } },
-      });
-    });
+        for (const item of dto.items) {
+          const ingredient = await tx.ingredient.upsert({
+            where: { name: item.name },
+            create: { name: item.name },
+            update: {},
+          });
+
+          const unitPrice = this.calculateUnitPrice(item.quantity, item.unit, item.price);
+          await tx.ingredientPrice.create({
+            data: {
+              userId,
+              ingredientId: ingredient.id,
+              receiptId: r.id,
+              price: item.price,
+              quantity: item.quantity,
+              unit: item.unit,
+              unitPrice,
+              currency: r.currency,
+              purchaseDate: r.purchaseDate,
+            },
+          });
+        }
+
+        return tx.receipt.findUniqueOrThrow({
+          where: { id: r.id },
+          include: { prices: { include: { ingredient: true } } },
+        });
+      },
+      { timeout: 30000 },
+    );
 
     return this.toFrontendReceipt(receipt);
   }

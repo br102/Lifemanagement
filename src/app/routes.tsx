@@ -7,6 +7,7 @@ import { GroceriesPage } from './components/groceries/GroceriesPage';
 import { TrainingPage } from './components/training/TrainingPage';
 import { ExpensesPage } from './components/expenses/ExpensesPage';
 import { CalendarPage } from './components/calendar/CalendarPage';
+import { NutritionLogPage } from './components/nutrition/NutritionLogPage';
 
 export const router = createBrowserRouter([
   {
@@ -16,6 +17,7 @@ export const router = createBrowserRouter([
       { index: true, Component: HomePage },
       { path: 'meals', Component: MealsPage },
       { path: 'planner', Component: MealPlannerPage },
+      { path: 'nutrition', Component: NutritionLogPage },
       { path: 'groceries', Component: GroceriesPage },
       { path: 'expenses', Component: ExpensesPage },
       { path: 'exercise', Component: TrainingPage },

@@ -19,6 +19,8 @@ import type {
   CalendarEvent,
   Schedule,
   ScheduleOccurrence,
+  NutritionLogEntry,
+  DailyNutritionSummary,
 } from '../types';
 
 interface AppContextType {
@@ -30,6 +32,7 @@ interface AppContextType {
   trainingDays: TrainingDay[];
   workoutSessions: WorkoutSession[];
   trainingBalance: TrainingBalance | null;
+  todayNutrition: DailyNutritionSummary | null;
   calendarEvents: CalendarEvent[];
   schedules: Schedule[];
   scheduleOccurrences: ScheduleOccurrence[];
@@ -81,6 +84,11 @@ interface AppContextType {
   deleteTrainingDay: (date: string) => Promise<void>;
   logWorkoutSession: (session: Omit<WorkoutSession, 'id' | 'createdAt'>) => Promise<WorkoutSession>;
   loadTrainingBalance: (from: string, to: string) => Promise<TrainingBalance>;
+  logMealEaten: (mealId: string, mealType?: MealType, quantity?: number, notes?: string) => Promise<void>;
+  logCustomFood: (entry: { label: string; mealType?: MealType; calories?: number; protein?: number; carbs?: number; fat?: number; notes?: string }) => Promise<void>;
+  updateLogEntry: (id: string, patch: any) => Promise<void>;
+  deleteLogEntry: (id: string) => Promise<void>;
+  getDaySummary: (date: string) => Promise<DailyNutritionSummary>;
   uploadReceiptImage: (file: File) => Promise<string>;
   parseReceiptImage: (imageUrl: string) => Promise<{ store: string; purchaseDate: string; totalAmount?: number; items: ReceiptLineItem[] }>;
   confirmReceipt: (store: string, purchaseDate: string, totalAmount: number | undefined, imageUrl: string, items: ReceiptLineItem[]) => Promise<Receipt>;
@@ -185,6 +193,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [trainingDays, setTrainingDays] = useState<TrainingDay[]>([]);
   const [workoutSessions, setWorkoutSessions] = useState<WorkoutSession[]>([]);
   const [trainingBalance, setTrainingBalance] = useState<TrainingBalance | null>(null);
+  const [todayNutrition, setTodayNutrition] = useState<DailyNutritionSummary | null>(null);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [scheduleOccurrences, setScheduleOccurrences] = useState<ScheduleOccurrence[]>([]);
@@ -308,6 +317,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
     await loadCalendarRange(monthStart, monthEnd);
+
+    // Load today's nutrition summary
+    const todayStr = today.toISOString().slice(0, 10);
+    const nutritionRes = await authFetch(`/nutrition-log/day/${todayStr}`);
+    setTodayNutrition(nutritionRes || null);
   }, [loadWeekPlan, loadGrocery, loadCalendarRange]);
 
   useEffect(() => {
@@ -632,6 +646,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return result as GroceryEstimate;
   }, []);
 
+  const logMealEaten = useCallback(async (mealId: string, mealType?: MealType, quantity?: number, notes?: string) => {
+    const today = new Date();
+    const date = today.toISOString().slice(0, 10);
+    const entry = await authFetch('/nutrition-log/from-meal', {
+      method: 'POST',
+      body: JSON.stringify({ date, mealId, mealType, quantity, notes }),
+    });
+    const summary = await authFetch(`/nutrition-log/day/${date}`);
+    setTodayNutrition(summary as DailyNutritionSummary);
+  }, []);
+
+  const logCustomFood = useCallback(async (entry: { label: string; mealType?: MealType; calories?: number; protein?: number; carbs?: number; fat?: number; notes?: string }) => {
+    const today = new Date();
+    const date = today.toISOString().slice(0, 10);
+    await authFetch('/nutrition-log', {
+      method: 'POST',
+      body: JSON.stringify({ date, ...entry }),
+    });
+    const summary = await authFetch(`/nutrition-log/day/${date}`);
+    setTodayNutrition(summary as DailyNutritionSummary);
+  }, []);
+
+  const updateLogEntry = useCallback(async (id: string, patch: any) => {
+    const today = new Date();
+    const date = today.toISOString().slice(0, 10);
+    await authFetch(`/nutrition-log/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    });
+    const summary = await authFetch(`/nutrition-log/day/${date}`);
+    setTodayNutrition(summary as DailyNutritionSummary);
+  }, []);
+
+  const deleteLogEntry = useCallback(async (id: string) => {
+    const today = new Date();
+    const date = today.toISOString().slice(0, 10);
+    await authFetch(`/nutrition-log/${id}`, { method: 'DELETE' });
+    const summary = await authFetch(`/nutrition-log/day/${date}`);
+    setTodayNutrition(summary as DailyNutritionSummary);
+  }, []);
+
+  const getDaySummary = useCallback(async (date: string) => {
+    const result = await authFetch(`/nutrition-log/day/${date}`);
+    return result as DailyNutritionSummary;
+  }, []);
+
   return (
     <AppContext.Provider
       value={{
@@ -643,6 +703,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         trainingDays,
         workoutSessions,
         trainingBalance,
+        todayNutrition,
         calendarEvents,
         schedules,
         scheduleOccurrences,
@@ -676,6 +737,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteTrainingDay,
         logWorkoutSession,
         loadTrainingBalance,
+        logMealEaten,
+        logCustomFood,
+        updateLogEntry,
+        deleteLogEntry,
+        getDaySummary,
         uploadReceiptImage,
         parseReceiptImage,
         confirmReceipt,

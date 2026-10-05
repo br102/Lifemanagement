@@ -1,6 +1,6 @@
 import { useApp } from '../../context/AppContext';
 import { Link } from 'react-router';
-import { ChefHat, CalendarDays, ShoppingCart, Star, Clock, Flame, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { ChefHat, CalendarDays, ShoppingCart, Star, Clock, Flame, TrendingUp, CheckCircle2, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -11,7 +11,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export function HomePage() {
-  const { meals, weekPlans, groceryLists } = useApp();
+  const { meals, weekPlans, groceryLists, todayNutrition, logMealEaten } = useApp();
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const currentWeekStart = '2026-04-27';
@@ -23,6 +23,8 @@ export function HomePage() {
 
   const getMeal = (id?: string) => meals.find(m => m.id === id);
   const recentMeals = [...meals].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
+
+  const eatenMealIds = new Set(todayNutrition?.entries.filter(e => e.mealId).map(e => e.mealId));
 
   const stats = [
     { label: 'Total Meals', value: meals.length, icon: ChefHat, color: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
@@ -73,45 +75,116 @@ export function HomePage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Plan */}
-        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-900 dark:text-white" style={{ fontWeight: 600 }}>Today's Meals</h3>
-            <Link to="/planner" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center gap-1" style={{ fontSize: '0.8rem' }}>
-              View Planner →
-            </Link>
-          </div>
-          <div className="space-y-3">
-            {todayMeals.map(({ label, slot, emoji }) => {
-              const meal = getMeal(todayPlan?.[slot]);
-              return (
-                <div key={slot} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 hover:bg-amber-50/50 dark:hover:bg-gray-700 transition-colors">
-                  <span style={{ fontSize: '1.2rem' }}>{emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p style={{ fontSize: '0.75rem' }} className="text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
-                    {meal ? (
-                      <p className="text-gray-800 dark:text-gray-200 truncate" style={{ fontSize: '0.9rem', fontWeight: 500 }}>{meal.name}</p>
-                    ) : (
-                      <p className="text-gray-300 dark:text-gray-600" style={{ fontSize: '0.85rem' }}>Not planned</p>
-                    )}
-                  </div>
-                  {meal && (
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-gray-400 dark:text-gray-500" style={{ fontSize: '0.75rem' }}>{meal.nutritionalValue.calories} kcal</span>
-                      {meal.image && (
-                        <img src={meal.image} alt={meal.name} className="w-10 h-10 rounded-lg object-cover" />
+        {/* Today's Plan and Nutrition */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Today's Meals */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-gray-900 dark:text-white" style={{ fontWeight: 600 }}>Today's Meals</h3>
+              <Link to="/planner" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center gap-1" style={{ fontSize: '0.8rem' }}>
+                View Planner →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {todayMeals.map(({ label, slot, emoji }) => {
+                const meal = getMeal(todayPlan?.[slot]);
+                const isEaten = meal && eatenMealIds.has(meal.id);
+                return (
+                  <div key={slot} className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${isEaten ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700/50 hover:bg-amber-50/50 dark:hover:bg-gray-700'}`}>
+                    <span style={{ fontSize: '1.2rem' }}>{emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p style={{ fontSize: '0.75rem' }} className="text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
+                      {meal ? (
+                        <p className="text-gray-800 dark:text-gray-200 truncate" style={{ fontSize: '0.9rem', fontWeight: 500 }}>{meal.name}</p>
+                      ) : (
+                        <p className="text-gray-300 dark:text-gray-600" style={{ fontSize: '0.85rem' }}>Not planned</p>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    {meal && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-gray-400 dark:text-gray-500" style={{ fontSize: '0.75rem' }}>{meal.nutritionalValue.calories} kcal</span>
+                        <button
+                          onClick={() => logMealEaten(meal.id, label as any)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isEaten
+                              ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400'
+                              : 'bg-gray-100 dark:bg-gray-600 text-gray-400 dark:text-gray-500 hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900/40 dark:hover:text-amber-400'
+                          }`}
+                          title={isEaten ? 'Marked as eaten' : 'Mark as eaten'}
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        {meal.image && (
+                          <img src={meal.image} alt={meal.name} className="w-10 h-10 rounded-lg object-cover" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!todayPlan?.breakfast && !todayPlan?.lunch && !todayPlan?.dinner && (
+              <Link to="/planner" className="mt-3 flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-amber-200 dark:border-amber-800/50 rounded-xl text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" style={{ fontSize: '0.85rem' }}>
+                <CalendarDays className="w-4 h-4" />
+                Plan today's meals
+              </Link>
+            )}
           </div>
-          {!todayPlan?.breakfast && !todayPlan?.lunch && !todayPlan?.dinner && (
-            <Link to="/planner" className="mt-3 flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-amber-200 dark:border-amber-800/50 rounded-xl text-amber-500 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors" style={{ fontSize: '0.85rem' }}>
-              <CalendarDays className="w-4 h-4" />
-              Plan today's meals
-            </Link>
+
+          {/* Today's Nutrition */}
+          {todayNutrition && (
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-gray-900 dark:text-white" style={{ fontWeight: 600 }}>Nutrition Summary</h3>
+                <Link to="/nutrition" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center gap-1" style={{ fontSize: '0.8rem' }}>
+                  Details →
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="mb-2 flex justify-between items-center">
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }} className="text-gray-600 dark:text-gray-300">Calories</span>
+                    <span style={{ fontSize: '0.8rem' }} className="text-gray-400">{todayNutrition.totals.calories}/{todayNutrition.targets.calories || '—'}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full ${
+                        todayNutrition.totals.calories > (todayNutrition.targets.calories || 0)
+                          ? 'bg-red-400'
+                          : 'bg-amber-400'
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          (todayNutrition.totals.calories / (todayNutrition.targets.calories || 1)) * 100,
+                          100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 flex justify-between items-center">
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500 }} className="text-gray-600 dark:text-gray-300">Protein</span>
+                    <span style={{ fontSize: '0.8rem' }} className="text-gray-400">{todayNutrition.totals.protein}g/{todayNutrition.targets.protein || '—'}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+                    <div
+                      className={`h-2 rounded-full ${
+                        todayNutrition.totals.protein > (todayNutrition.targets.protein || 0)
+                          ? 'bg-green-400'
+                          : 'bg-green-300'
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          (todayNutrition.totals.protein / (todayNutrition.targets.protein || 1)) * 100,
+                          100,
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
 

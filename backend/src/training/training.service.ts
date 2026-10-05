@@ -72,30 +72,33 @@ export class TrainingService {
   async upsertTrainingDay(userId: string, dto: UpsertTrainingDayDto) {
     await this.assertExerciseOwnership(userId, dto.exercises.map((item) => item.exerciseId));
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const day = await tx.trainingDay.upsert({
-        where: { userId_date: { userId, date: dto.date } },
-        create: { userId, date: dto.date, status: dto.status ?? 'planned', notes: dto.notes },
-        update: { status: dto.status ?? 'planned', notes: dto.notes },
-      });
-      await tx.trainingDayExercise.deleteMany({ where: { trainingDayId: day.id } });
-      for (const [index, item] of dto.exercises.entries()) {
-        await tx.trainingDayExercise.create({
-          data: {
-            trainingDayId: day.id,
-            exerciseId: item.exerciseId,
-            orderNo: index + 1,
-            sets: item.sets,
-            reps: item.reps,
-            durationMin: item.durationMin,
-            targetWeight: item.targetWeight,
-            intensity: item.intensity,
-            notes: item.notes,
-          },
+    const row = await this.prisma.$transaction(
+      async (tx) => {
+        const day = await tx.trainingDay.upsert({
+          where: { userId_date: { userId, date: dto.date } },
+          create: { userId, date: dto.date, status: dto.status ?? 'planned', notes: dto.notes },
+          update: { status: dto.status ?? 'planned', notes: dto.notes },
         });
-      }
-      return tx.trainingDay.findUniqueOrThrow({ where: { id: day.id }, include: this.trainingDayInclude });
-    });
+        await tx.trainingDayExercise.deleteMany({ where: { trainingDayId: day.id } });
+        for (const [index, item] of dto.exercises.entries()) {
+          await tx.trainingDayExercise.create({
+            data: {
+              trainingDayId: day.id,
+              exerciseId: item.exerciseId,
+              orderNo: index + 1,
+              sets: item.sets,
+              reps: item.reps,
+              durationMin: item.durationMin,
+              targetWeight: item.targetWeight,
+              intensity: item.intensity,
+              notes: item.notes,
+            },
+          });
+        }
+        return tx.trainingDay.findUniqueOrThrow({ where: { id: day.id }, include: this.trainingDayInclude });
+      },
+      { timeout: 30000 },
+    );
 
     return this.toTrainingDay(row);
   }
@@ -123,36 +126,39 @@ export class TrainingService {
       if (!day) throw new NotFoundException('Training day not found');
     }
 
-    const row = await this.prisma.$transaction(async (tx) => {
-      const session = await tx.workoutSession.create({
-        data: {
-          userId,
-          trainingDayId: dto.trainingDayId,
-          date: dto.date,
-          status: dto.status ?? 'completed',
-          durationMin: dto.durationMin,
-          notes: dto.notes,
-        },
-      });
-      if (dto.trainingDayId) {
-        await tx.trainingDay.update({ where: { id: dto.trainingDayId }, data: { status: dto.status ?? 'completed' } });
-      }
-      for (const [index, item] of dto.exercises.entries()) {
-        await tx.workoutSessionExercise.create({
+    const row = await this.prisma.$transaction(
+      async (tx) => {
+        const session = await tx.workoutSession.create({
           data: {
-            workoutSessionId: session.id,
-            exerciseId: item.exerciseId,
-            orderNo: index + 1,
-            sets: item.sets,
-            reps: item.reps,
-            weight: item.weight,
-            durationMin: item.durationMin,
-            notes: item.notes,
+            userId,
+            trainingDayId: dto.trainingDayId,
+            date: dto.date,
+            status: dto.status ?? 'completed',
+            durationMin: dto.durationMin,
+            notes: dto.notes,
           },
         });
-      }
-      return tx.workoutSession.findUniqueOrThrow({ where: { id: session.id }, include: this.workoutSessionInclude });
-    });
+        if (dto.trainingDayId) {
+          await tx.trainingDay.update({ where: { id: dto.trainingDayId }, data: { status: dto.status ?? 'completed' } });
+        }
+        for (const [index, item] of dto.exercises.entries()) {
+          await tx.workoutSessionExercise.create({
+            data: {
+              workoutSessionId: session.id,
+              exerciseId: item.exerciseId,
+              orderNo: index + 1,
+              sets: item.sets,
+              reps: item.reps,
+              weight: item.weight,
+              durationMin: item.durationMin,
+              notes: item.notes,
+            },
+          });
+        }
+        return tx.workoutSession.findUniqueOrThrow({ where: { id: session.id }, include: this.workoutSessionInclude });
+      },
+      { timeout: 30000 },
+    );
 
     return this.toWorkoutSession(row);
   }

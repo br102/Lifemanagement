@@ -8,6 +8,7 @@ import { MealPlannerModule } from './meal-planner/meal-planner.module';
 import { GroceriesModule } from './groceries/groceries.module';
 import { ProfileModule } from './profile/profile.module';
 import { TrainingModule } from './training/training.module';
+import { NutritionLogModule } from './nutrition-log/nutrition-log.module';
 import { CalendarModule } from './calendar/calendar.module';
 import { AiModule } from './ai/ai.module';
 import { StorageModule } from './storage/storage.module';
@@ -28,6 +29,7 @@ import { RequestLoggerMiddleware } from './common/logger/request-logger.middlewa
     GroceriesModule,
     ProfileModule,
     TrainingModule,
+    NutritionLogModule,
     CalendarModule,
     ExpensesModule,
   ],
