@@ -50,7 +50,7 @@ export function AddMealModal({ meal, onClose, onSaved }: Props) {
 
   const { register, handleSubmit, watch, setValue, control, formState: { errors } } = useForm<FormValues>({
     defaultValues: meal ? {
-      name: meal.name, image: meal.image || '', score: meal.score, desiredFrequency: meal.desiredFrequency,
+      name: meal.name, image: meal.image || '', score: meal.score, desiredFrequency: meal.desiredFrequency || 'WEEKLY',
       types: meal.types, category: meal.category, tags: meal.tags?.join(', ') || '',
       prepTime: meal.prepTime || 0, cookTime: meal.cookTime || 0, servings: meal.servings || 2,
       ingredients: meal.ingredients.map(i => ({ name: i.name, amount: i.amount, unit: i.unit })),

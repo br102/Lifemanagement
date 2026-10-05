@@ -22,7 +22,7 @@ export interface Meal {
   id: string;
   name: string;
   score: number;
-  desiredFrequency: DesiredFrequency;
+  desiredFrequency?: DesiredFrequency;
   category: string;
   types: MealType[];
   ingredients: Ingredient[];

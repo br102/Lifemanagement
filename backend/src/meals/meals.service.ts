@@ -138,7 +138,7 @@ export class MealsService {
     id: meal.id,
     name: meal.name,
     score: meal.score,
-    desiredFrequency: meal.desiredFrequency,
+    desiredFrequency: meal.desiredFrequency ?? 'WEEKLY',
     category: meal.category?.name ?? 'Healthy',
     types: meal.types.map((t: any) => {
       const typeMap: Record<string, string> = {
