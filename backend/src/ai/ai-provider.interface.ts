@@ -17,7 +17,7 @@ export interface NutritionResult {
 
 export interface PlannerInput {
   weekStartDate: string;
-  meals: Array<{ id: string; name: string; types: string[]; category: string }>;
+  meals: Array<{ id: string; name: string; types: string[]; category: string; score?: number; desiredFrequency?: string }>;
   profile?: {
     displayName?: string | null;
     weightKg?: number | null;
