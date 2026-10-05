@@ -20,12 +20,12 @@ export function UploadReceiptModal({ isOpen, onClose, onSuccess }: UploadReceipt
   const [parsedDraft, setParsedDraft] = useState<{ store: string; purchaseDate: string; totalAmount?: number; items: ReceiptLineItem[] } | null>(null);
 
   const { uploadReceiptImage, parseReceiptImage, confirmReceipt } = useApp();
-  const { register, handleSubmit, control, watch, formState } = useForm({
+  const { register, handleSubmit, control, watch, formState, reset } = useForm({
     defaultValues: {
       store: 'Biedronka',
       purchaseDate: new Date().toISOString().split('T')[0],
       totalAmount: '',
-      items: parsedDraft?.items || [],
+      items: [],
     },
   });
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
@@ -48,9 +48,24 @@ export function UploadReceiptModal({ isOpen, onClose, onSuccess }: UploadReceipt
 
       setParseLoading(true);
       const draft = await parseReceiptImage(url);
+
+      if (!draft) {
+        throw new Error('Failed to parse receipt - no data returned');
+      }
+
       setParsedDraft(draft);
+
+      // Reset form with parsed data
+      reset({
+        store: draft.store || 'Biedronka',
+        purchaseDate: draft.purchaseDate || new Date().toISOString().split('T')[0],
+        totalAmount: draft.totalAmount?.toString() || '',
+        items: draft.items || [],
+      });
+
       setStep('review');
     } catch (err) {
+      console.error('Receipt parsing error:', err);
       setUploadError(err instanceof Error ? err.message : 'Failed to process receipt');
     } finally {
       setUploadLoading(false);
