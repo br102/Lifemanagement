@@ -312,6 +312,7 @@ export function MealPlannerPage() {
   const [generating, setGenerating] = useState(false);
   const [showGenMenu, setShowGenMenu] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
@@ -324,6 +325,7 @@ export function MealPlannerPage() {
 
   const handleGeneratePlan = async (weeksAhead: 0 | 1 | 2) => {
     setGenerating(true);
+    setErrorMsg('');
     try {
       const targetWeekStart = format(addWeeks(weekStart, weeksAhead), 'yyyy-MM-dd');
       const plan = await aiGenerateMealPlan(targetWeekStart);
@@ -331,6 +333,10 @@ export function MealPlannerPage() {
       setSuccessMsg(`Meal plan generated for week of ${format(parseISO(targetWeekStart), 'MMM d')}!`);
       if (view === 'week') setCurrentDate(addWeeks(weekStart, weeksAhead));
       setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to generate meal plan';
+      setErrorMsg(msg);
+      setTimeout(() => setErrorMsg(''), 5000);
     } finally {
       setGenerating(false);
     }
@@ -429,6 +435,16 @@ export function MealPlannerPage() {
             <Check className="w-3 h-3 text-white" />
           </div>
           <p className="text-green-700 text-sm">{successMsg}</p>
+        </div>
+      )}
+
+      {/* Error message */}
+      {errorMsg && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2">
+          <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <X className="w-3 h-3 text-white" />
+          </div>
+          <p className="text-red-700 text-sm">{errorMsg}</p>
         </div>
       )}
 

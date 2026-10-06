@@ -45,22 +45,44 @@ export class MealPlannerService {
 
   async aiGenerate(userId: string, weekStartDate: string) {
     const meals = await this.prisma.meal.findMany({ where: { userId }, include: { types: true, category: true } });
-    const profile = await this.getProfileSummary(userId);
-    const generated = await this.ai.generateWeekPlan({
-      weekStartDate,
-      meals: meals.map((m) => ({
-        id: m.id,
-        name: m.name,
-        types: m.types.map((t) => t.type),
-        category: m.category?.name ?? 'Healthy',
-      })),
-      profile,
-    });
-    const plan = await this.prisma.weekPlan.upsert({ where: { userId_startDate: { userId, startDate: weekStartDate } }, create: { userId, startDate: weekStartDate, aiGenerated: true }, update: { aiGenerated: true } });
-    for (const [date, slots] of Object.entries(generated)) {
-      await this.prisma.dayPlan.upsert({ where: { weekPlanId_date: { weekPlanId: plan.id, date } }, create: { weekPlanId: plan.id, date, breakfastId: slots.breakfast, lunchId: slots.lunch, snackId: slots.snack, proteinShakeId: slots.proteinShake, dinnerId: slots.dinner }, update: { breakfastId: slots.breakfast, lunchId: slots.lunch, snackId: slots.snack, proteinShakeId: slots.proteinShake, dinnerId: slots.dinner } });
+    if (!meals.length) {
+      throw new Error('No meals found. Please add some meals to your catalog before generating a plan.');
     }
-    return this.getWeek(userId, weekStartDate);
+    const profile = await this.getProfileSummary(userId);
+    try {
+      const generated = await this.ai.generateWeekPlan({
+        weekStartDate,
+        meals: meals.map((m) => ({
+          id: m.id,
+          name: m.name,
+          types: m.types.map((t) => t.type),
+          category: m.category?.name ?? 'Healthy',
+          desiredFrequency: undefined,
+          score: undefined,
+        })),
+        profile,
+      });
+      if (!generated || typeof generated !== 'object' || !Object.keys(generated).length) {
+        throw new Error('AI generated empty meal plan. Please try again.');
+      }
+      const plan = await this.prisma.weekPlan.upsert({ where: { userId_startDate: { userId, startDate: weekStartDate } }, create: { userId, startDate: weekStartDate, aiGenerated: true }, update: { aiGenerated: true } });
+      for (const [date, slots] of Object.entries(generated)) {
+        const breakfast = typeof slots?.breakfast === 'string' ? slots.breakfast : null;
+        const lunch = typeof slots?.lunch === 'string' ? slots.lunch : null;
+        const snack = typeof slots?.snack === 'string' ? slots.snack : null;
+        const proteinShake = typeof slots?.proteinShake === 'string' ? slots.proteinShake : null;
+        const dinner = typeof slots?.dinner === 'string' ? slots.dinner : null;
+        await this.prisma.dayPlan.upsert({
+          where: { weekPlanId_date: { weekPlanId: plan.id, date } },
+          create: { weekPlanId: plan.id, date, breakfastId: breakfast, lunchId: lunch, snackId: snack, proteinShakeId: proteinShake, dinnerId: dinner },
+          update: { breakfastId: breakfast, lunchId: lunch, snackId: snack, proteinShakeId: proteinShake, dinnerId: dinner },
+        });
+      }
+      return this.getWeek(userId, weekStartDate);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to generate meal plan';
+      throw new Error(`AI meal plan generation failed: ${message}`);
+    }
   }
 
   async getMonth(userId: string, month: string) {

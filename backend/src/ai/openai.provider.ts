@@ -4,7 +4,7 @@ import { AiProvider, GrocerySuggestion, MealClassification, MealDraftSuggestion,
 @Injectable()
 export class OpenAiProvider implements AiProvider {
   private readonly apiKey = process.env.OPENAI_API_KEY;
-  private readonly model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+  private readonly model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   private readonly baseUrl = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
 
   async classifyMeal(name: string, ingredients: string[]): Promise<MealClassification> {
