@@ -307,7 +307,8 @@ function MonthView({ currentDate, showMeals, onDayClick }: { currentDate: Date; 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function MealPlannerPage() {
-  const { aiGenerateMealPlan, saveWeekPlan } = useApp();
+  const appContext = useApp();
+  const { aiGenerateMealPlan, saveWeekPlan, loadWeekPlan } = appContext;
   const [view, setView] = useState<'week' | 'month'>('week');
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [showMeals, setShowMeals] = useState(false);
@@ -322,6 +323,11 @@ export function MealPlannerPage() {
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
   const monthStart = useMemo(() => startOfMonth(currentDate), [currentDate]);
+
+  useEffect(() => {
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    loadWeekPlan(weekStartStr);
+  }, [weekStart, loadWeekPlan]);
 
   const navigate = (dir: 1 | -1) => {
     if (view === 'week') setCurrentDate(d => addWeeks(d, dir));
