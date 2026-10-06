@@ -144,20 +144,47 @@ Link: ${link}`;
       ? `User profile:
 ${JSON.stringify(input.profile, null, 2)}`
       : 'User profile: not provided';
+
+    const prefs = input.preferences || {};
+    const preferencesBlock = `User preferences for meal planning:
+${prefs.dietaryRestrictions ? `- Dietary restrictions: ${prefs.dietaryRestrictions}` : '- No dietary restrictions'}
+${prefs.cuisinePreferences ? `- Cuisine preferences: ${prefs.cuisinePreferences}` : '- Open to any cuisine'}
+${prefs.ingredientsToAvoid ? `- Ingredients to avoid: ${prefs.ingredientsToAvoid}` : '- No ingredient restrictions'}
+${prefs.cookingLevel ? `- Cooking level: ${prefs.cookingLevel} (quick = <30 min, moderate = 30-60 min)` : '- Cooking level: any'}
+${prefs.mealRepetition ? `- Meal repetition target: each meal should appear ~${prefs.mealRepetition} times in the week` : '- Meal repetition target: 2-3 times per week for efficiency'}
+${prefs.notes ? `- Additional notes: ${prefs.notes}` : ''}`;
+
     const prompt = `Create a 7-day meal plan from weekStartDate ${input.weekStartDate}.
 Return strict JSON object where each key is YYYY-MM-DD and each value is:
 {"breakfast":"mealId|null","lunch":"mealId|null","snack":"mealId|null","proteinShake":"mealId|null","dinner":"mealId|null"}
+
 Use only meal IDs from this pool:
 ${JSON.stringify(mealPool)}
+
 ${profileBlock}
-Goal:
-- Primary objective: hit targetProtein every day — distribute protein across breakfast/lunch/snack/proteinShake/dinner slots so the daily total stays as close as possible to the target without large misses.
-- Secondary: stay close to targetCalories/targetCarbs/targetFat for balance.
-- If no targets are set, just build a balanced, varied week.
-- Keep variety across the week, but allow smart repetition for meal prep efficiency.
-- Respect desiredFrequency: WEEKLY meals should appear ~1x/week, BIWEEKLY ~1x/2weeks, MONTHLY ~1x/month, OCCASIONAL 0-1x/week, SPECIAL rare.
-- Favor meals with better scores when multiple options fit equally well.
-- Leave a slot null if no meal in the pool is a good fit.`;
+
+${preferencesBlock}
+
+**CRITICAL: User lives alone — optimize for meal prep efficiency**
+- MOST IMPORTANT: Repeat meals 2-3 times throughout the week in DIFFERENT slots
+- Example good plan: Chicken with rice appears Monday lunch, Wednesday dinner, Friday snack
+- This is realistic single-person cooking: cook once, eat multiple times over 2-3 days
+- Spread repeated meals across non-consecutive days for variety perception
+- Do NOT use all different meals — that's wasteful for one person
+
+**Nutritional goals:**
+- Primary: hit targetProtein every day
+- Secondary: stay close to targetCalories/targetCarbs/targetFat
+- If no targets, build balanced varied week
+- Respect desiredFrequency: WEEKLY ~1x/week, BIWEEKLY ~1x/2weeks, MONTHLY ~1x/month, OCCASIONAL 0-1x/week, SPECIAL rare
+- Favor high-score meals
+- Leave slot null if no good fit
+
+**Respect user preferences:**
+- Match dietary restrictions (vegetarian, vegan, gluten-free, etc.)
+- Use preferred cuisines when possible
+- Avoid specified ingredients
+- Prioritize cooking level preference`;
     const json = await this.askJson(prompt);
     if (!json || typeof json !== 'object' || Array.isArray(json)) {
       throw new Error('OpenAI generateWeekPlan returned invalid JSON');

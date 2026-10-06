@@ -15,6 +15,15 @@ export interface NutritionResult {
   sodium: number;
 }
 
+export interface MealPlanPreferences {
+  dietaryRestrictions?: string; // e.g., "vegetarian, gluten-free"
+  cuisinePreferences?: string; // e.g., "Italian, Asian, Mediterranean"
+  ingredientsToAvoid?: string; // e.g., "shellfish, peanuts"
+  cookingLevel?: 'quick' | 'moderate' | 'advanced'; // quick = <30 min, moderate = 30-60 min
+  mealRepetition?: number; // How many times to repeat a meal in the week (default 2-3)
+  notes?: string; // Any additional preferences
+}
+
 export interface PlannerInput {
   weekStartDate: string;
   meals: Array<{ id: string; name: string; types: string[]; category: string; score?: number; desiredFrequency?: string }>;
@@ -30,6 +39,7 @@ export interface PlannerInput {
     targetFat?: number | null;
     mealsPerDay?: number | null;
   };
+  preferences?: MealPlanPreferences;
 }
 
 export interface GrocerySuggestion {

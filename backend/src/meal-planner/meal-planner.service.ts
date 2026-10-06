@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { UpsertSlotDto } from './dto/upsert-slot.dto';
+import { GeneratePlanDto } from './dto/generate-plan.dto';
 import { AiProvider } from '../ai/ai-provider.interface';
 
 @Injectable()
@@ -43,7 +44,7 @@ export class MealPlannerService {
     return this.getWeek(userId, weekStartDate);
   }
 
-  async aiGenerate(userId: string, weekStartDate: string) {
+  async aiGenerate(userId: string, dto: GeneratePlanDto) {
     const meals = await this.prisma.meal.findMany({ where: { userId }, include: { types: true, category: true } });
     if (!meals.length) {
       throw new Error('No meals found. Please add some meals to your catalog before generating a plan.');
@@ -51,7 +52,7 @@ export class MealPlannerService {
     const profile = await this.getProfileSummary(userId);
     try {
       const generated = await this.ai.generateWeekPlan({
-        weekStartDate,
+        weekStartDate: dto.weekStartDate,
         meals: meals.map((m) => ({
           id: m.id,
           name: m.name,
@@ -61,11 +62,19 @@ export class MealPlannerService {
           score: undefined,
         })),
         profile,
+        preferences: {
+          dietaryRestrictions: dto.dietaryRestrictions,
+          cuisinePreferences: dto.cuisinePreferences,
+          ingredientsToAvoid: dto.ingredientsToAvoid,
+          cookingLevel: dto.cookingLevel,
+          mealRepetition: dto.mealRepetition,
+          notes: dto.notes,
+        },
       });
       if (!generated || typeof generated !== 'object' || !Object.keys(generated).length) {
         throw new Error('AI generated empty meal plan. Please try again.');
       }
-      const plan = await this.prisma.weekPlan.upsert({ where: { userId_startDate: { userId, startDate: weekStartDate } }, create: { userId, startDate: weekStartDate, aiGenerated: true }, update: { aiGenerated: true } });
+      const plan = await this.prisma.weekPlan.upsert({ where: { userId_startDate: { userId, startDate: dto.weekStartDate } }, create: { userId, startDate: dto.weekStartDate, aiGenerated: true }, update: { aiGenerated: true } });
       for (const [date, slots] of Object.entries(generated)) {
         const breakfast = typeof slots?.breakfast === 'string' ? slots.breakfast : null;
         const lunch = typeof slots?.lunch === 'string' ? slots.lunch : null;
@@ -78,7 +87,7 @@ export class MealPlannerService {
           update: { breakfastId: breakfast, lunchId: lunch, snackId: snack, proteinShakeId: proteinShake, dinnerId: dinner },
         });
       }
-      return this.getWeek(userId, weekStartDate);
+      return this.getWeek(userId, dto.weekStartDate);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to generate meal plan';
       throw new Error(`AI meal plan generation failed: ${message}`);

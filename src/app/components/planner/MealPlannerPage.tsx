@@ -9,6 +9,7 @@ import {
 } from 'date-fns';
 import { useApp } from '../../context/AppContext';
 import { MealDetailModal } from '../meals/MealDetailModal';
+import { MealPlanPreferencesModal } from './MealPlanPreferencesModal';
 import type { Meal, MealType } from '../../types';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -312,6 +313,8 @@ export function MealPlannerPage() {
   const [showMeals, setShowMeals] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showGenMenu, setShowGenMenu] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
+  const [preferencesWeeksAhead, setPreferencesWeeksAhead] = useState<0 | 1 | 2>(0);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
@@ -325,15 +328,21 @@ export function MealPlannerPage() {
     else setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + dir, 1));
   };
 
-  const handleGeneratePlan = async (weeksAhead: 0 | 1 | 2) => {
+  const handleGenerateClick = (weeksAhead: 0 | 1 | 2) => {
+    setPreferencesWeeksAhead(weeksAhead);
+    setShowPreferences(true);
+    setShowGenMenu(false);
+  };
+
+  const handleGeneratePlan = async (preferences: { dietaryRestrictions?: string; cuisinePreferences?: string; ingredientsToAvoid?: string; cookingLevel?: 'quick' | 'moderate' | 'advanced'; mealRepetition?: number; notes?: string }) => {
     setGenerating(true);
     setErrorMsg('');
     try {
-      const targetWeekStart = format(addWeeks(weekStart, weeksAhead), 'yyyy-MM-dd');
-      const plan = await aiGenerateMealPlan(targetWeekStart);
+      const targetWeekStart = format(addWeeks(weekStart, preferencesWeeksAhead), 'yyyy-MM-dd');
+      const plan = await aiGenerateMealPlan(targetWeekStart, preferences);
       saveWeekPlan(plan);
       setSuccessMsg(`Meal plan generated for week of ${format(parseISO(targetWeekStart), 'MMM d')}!`);
-      if (view === 'week') setCurrentDate(addWeeks(weekStart, weeksAhead));
+      if (view === 'week') setCurrentDate(addWeeks(weekStart, preferencesWeeksAhead));
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to generate meal plan';
@@ -411,7 +420,7 @@ export function MealPlannerPage() {
               {(['This Week', 'Next Week', 'Week After Next'] as const).map((label, i) => (
                 <button
                   key={label}
-                  onClick={() => { setShowGenMenu(false); handleGeneratePlan(i as 0 | 1 | 2); }}
+                  onClick={() => handleGenerateClick(i as 0 | 1 | 2)}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-violet-50 dark:hover:bg-violet-900/20 text-left transition-colors"
                 >
                   <div className="w-7 h-7 bg-violet-100 dark:bg-violet-900/40 rounded-lg flex items-center justify-center">
@@ -491,6 +500,14 @@ export function MealPlannerPage() {
           onEdit={() => {}}
         />
       )}
+
+      <MealPlanPreferencesModal
+        isOpen={showPreferences}
+        onClose={() => setShowPreferences(false)}
+        onGenerate={handleGeneratePlan}
+        isGenerating={generating}
+        weekStartDate={format(addWeeks(weekStart, preferencesWeeksAhead), 'yyyy-MM-dd')}
+      />
     </div>
   );
 }

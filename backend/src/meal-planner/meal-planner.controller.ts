@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UpsertSlotDto } from './dto/upsert-slot.dto';
+import { GeneratePlanDto } from './dto/generate-plan.dto';
 import { MealPlannerService } from './meal-planner.service';
 
 @ApiTags('meal-planner')
@@ -25,8 +26,8 @@ export class MealPlannerController {
     return this.planner.upsertSlot(user.userId, weekStartDate, dto);
   }
 
-  @Post('week/:weekStartDate/ai-generate')
-  aiGenerate(@CurrentUser() user: { userId: string }, @Param('weekStartDate') weekStartDate: string) {
-    return this.planner.aiGenerate(user.userId, weekStartDate);
+  @Post('week/ai-generate')
+  aiGenerate(@CurrentUser() user: { userId: string }, @Body() dto: GeneratePlanDto) {
+    return this.planner.aiGenerate(user.userId, dto);
   }
 }

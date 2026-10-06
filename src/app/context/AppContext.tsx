@@ -74,7 +74,7 @@ interface AppContextType {
     servings?: number;
     tags?: string[];
   }>;
-  aiGenerateMealPlan: (weekStartDate: string) => Promise<WeekPlan>;
+  aiGenerateMealPlan: (weekStartDate: string, preferences?: { dietaryRestrictions?: string; cuisinePreferences?: string; ingredientsToAvoid?: string; cookingLevel?: 'quick' | 'moderate' | 'advanced'; mealRepetition?: number; notes?: string }) => Promise<WeekPlan>;
   aiGenerateGroceryList: (weekStartDate: string) => Promise<GroceryList>;
   getUserProfile: () => Promise<UserProfile | null>;
   saveUserProfile: (profile: Partial<UserProfile>) => Promise<UserProfile>;
@@ -502,8 +502,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return updated as UserProfile;
   }, []);
 
-  const aiGenerateMealPlan = useCallback(async (weekStartDate: string) => {
-    const plan = await authFetch(`/planner/week/${weekStartDate}/ai-generate`, { method: 'POST' });
+  const aiGenerateMealPlan = useCallback(async (weekStartDate: string, preferences?: { dietaryRestrictions?: string; cuisinePreferences?: string; ingredientsToAvoid?: string; cookingLevel?: 'quick' | 'moderate' | 'advanced'; mealRepetition?: number; notes?: string }) => {
+    const plan = await authFetch(`/planner/week/ai-generate`, {
+      method: 'POST',
+      body: JSON.stringify({ weekStartDate, ...preferences })
+    });
     saveWeekPlan(plan as WeekPlan);
     return plan as WeekPlan;
   }, [saveWeekPlan]);
