@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
+import { CALENDAR_CATEGORIES } from './calendarCategories';
+import type { CalendarCategory } from '../../types';
 
 export interface CalendarEventFormData {
   title: string;
@@ -11,6 +13,7 @@ export interface CalendarEventFormData {
   allDay: boolean;
   location?: string;
   notes?: string;
+  category: CalendarCategory;
 }
 
 interface Props {
@@ -31,6 +34,7 @@ export function AddEventModal({ isOpen, onClose, initialEvent, onSave }: Props) 
       allDay: false,
       location: '',
       notes: '',
+      category: 'events',
     }
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -157,6 +161,27 @@ export function AddEventModal({ isOpen, onClose, initialEvent, onSave }: Props) 
               {errors.title && (
                 <p className="text-xs text-red-500 mt-1">{errors.title}</p>
               )}
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">
+                Category
+              </label>
+              <div className="relative">
+                <select
+                  value={formData.category}
+                  onChange={(e) => handleInputChange('category', e.target.value)}
+                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 dark:focus:border-amber-500 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 appearance-none"
+                >
+                  {CALENDAR_CATEGORIES.map((cat) => (
+                    <option key={cat.key} value={cat.key}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+              </div>
             </div>
 
             {/* All-day Toggle */}

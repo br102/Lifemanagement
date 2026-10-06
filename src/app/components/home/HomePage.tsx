@@ -1,7 +1,7 @@
 import { useApp } from '../../context/AppContext';
 import { Link } from 'react-router';
-import { ChefHat, CalendarDays, ShoppingCart, Star, Clock, Flame, TrendingUp, CheckCircle2, Check } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { ChefHat, CalendarDays, ShoppingCart, Star, Clock, Flame, TrendingUp, CheckCircle2, Check, AlertCircle } from 'lucide-react';
+import { format, parseISO, isSameDay } from 'date-fns';
 
 const TYPE_COLORS: Record<string, string> = {
   Breakfast: 'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
@@ -11,7 +11,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export function HomePage() {
-  const { meals, weekPlans, groceryLists, todayNutrition, logMealEaten } = useApp();
+  const { meals, weekPlans, groceryLists, todayNutrition, logMealEaten, calendarEvents, scheduleOccurrences } = useApp();
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const currentWeekStart = '2026-04-27';
@@ -25,6 +25,14 @@ export function HomePage() {
   const recentMeals = [...meals].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
 
   const eatenMealIds = new Set(todayNutrition?.entries.filter(e => e.mealId).map(e => e.mealId));
+
+  const todayEvents = calendarEvents.filter(e => e.startDate === todayStr).sort((a, b) => {
+    const aTime = a.startTime || '00:00';
+    const bTime = b.startTime || '00:00';
+    return aTime.localeCompare(bTime);
+  });
+
+  const todaySchedules = scheduleOccurrences.filter(s => s.date === todayStr && !s.completed);
 
   const stats = [
     { label: 'Total Meals', value: meals.length, icon: ChefHat, color: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-100 dark:bg-amber-900/40' },
@@ -73,6 +81,47 @@ export function HomePage() {
           </div>
         ))}
       </div>
+
+      {/* Today's Schedule - if there are events/tasks */}
+      {(todayEvents.length > 0 || todaySchedules.length > 0) && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="text-gray-900 dark:text-white" style={{ fontWeight: 600 }}>Today's Schedule</h3>
+            </div>
+            <Link to="/calendar" className="text-amber-600 dark:text-amber-400 hover:text-amber-700 flex items-center gap-1" style={{ fontSize: '0.8rem' }}>
+              View Calendar →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {todayEvents.map(event => (
+              <div key={event.id} className="flex items-start gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50">
+                <div className="w-12 h-12 rounded-lg bg-white dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                  <span style={{ fontSize: '0.75rem' }} className="font-semibold text-gray-600 dark:text-gray-300">
+                    {event.startTime ? event.startTime.split(':')[0] : '—'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-900 dark:text-gray-100 font-medium">{event.title}</p>
+                  {event.location && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{event.location}</p>}
+                </div>
+              </div>
+            ))}
+            {todaySchedules.map(schedule => (
+              <div key={schedule.id} className="flex items-start gap-3 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800/50">
+                <div className="w-12 h-12 rounded-lg bg-white dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-gray-900 dark:text-gray-100 font-medium">Recurring Task</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Due today</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Plan and Nutrition */}

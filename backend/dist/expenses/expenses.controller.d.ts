@@ -66,44 +66,44 @@ export declare class ExpensesController {
     updateIngredient(user: {
         userId: string;
     }, id: string, dto: UpdateIngredientDto): Promise<{
-        name: string;
         id: string;
+        name: string;
         category: string;
     }>;
     updateIngredientPrice(user: {
         userId: string;
     }, id: string, dto: UpdateIngredientPriceDto): Promise<{
         ingredient: {
-            name: string;
             id: string;
+            name: string;
             category: string;
         };
     } & {
         id: string;
+        createdAt: Date;
+        unit: string;
         userId: string;
+        ingredientId: string;
+        quantity: number;
         purchaseDate: string;
         currency: string;
-        createdAt: Date;
-        ingredientId: string;
         receiptId: string | null;
         price: number;
-        quantity: number;
-        unit: string;
         unitPrice: number;
     }>;
     deleteIngredientPrice(user: {
         userId: string;
     }, id: string): Promise<{
         id: string;
+        createdAt: Date;
+        unit: string;
         userId: string;
+        ingredientId: string;
+        quantity: number;
         purchaseDate: string;
         currency: string;
-        createdAt: Date;
-        ingredientId: string;
         receiptId: string | null;
         price: number;
-        quantity: number;
-        unit: string;
         unitPrice: number;
     }>;
     updateReceipt(user: {
@@ -111,44 +111,44 @@ export declare class ExpensesController {
     }, id: string, dto: UpdateReceiptDto): Promise<{
         prices: ({
             ingredient: {
-                name: string;
                 id: string;
+                name: string;
                 category: string;
             };
         } & {
             id: string;
+            createdAt: Date;
+            unit: string;
             userId: string;
+            ingredientId: string;
+            quantity: number;
             purchaseDate: string;
             currency: string;
-            createdAt: Date;
-            ingredientId: string;
             receiptId: string | null;
             price: number;
-            quantity: number;
-            unit: string;
             unitPrice: number;
         })[];
     } & {
         id: string;
+        createdAt: Date;
         userId: string;
         store: string;
         imageUrl: string;
         purchaseDate: string;
         totalAmount: number | null;
         currency: string;
-        createdAt: Date;
     }>;
     deleteReceipt(user: {
         userId: string;
     }, id: string): Promise<{
         id: string;
+        createdAt: Date;
         userId: string;
         store: string;
         imageUrl: string;
         purchaseDate: string;
         totalAmount: number | null;
         currency: string;
-        createdAt: Date;
     }>;
     getMonthlySpending(user: {
         userId: string;
@@ -169,12 +169,12 @@ export declare class ExpensesController {
         userId: string;
     }, month: string, dto: UpsertBudgetsDto): Promise<{
         id: string;
-        userId: string;
-        currency: string;
         createdAt: Date;
-        category: string;
         updatedAt: Date;
+        category: string;
+        userId: string;
         month: string;
+        currency: string;
         amountLimit: number;
     }[]>;
 }

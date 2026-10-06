@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit -m 'Fix: Add loadWeekPlan to AppContext exports *)"
+      "Bash(git commit -m 'Fix: Add loadWeekPlan to AppContext exports *)",
+      "Bash(xargs grep -l \"description:\")",
+      "Bash(curl -s http://localhost:5175)"
     ]
   }
 }

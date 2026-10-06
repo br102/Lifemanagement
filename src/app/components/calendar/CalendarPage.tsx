@@ -252,7 +252,7 @@ export function CalendarPage() {
             endTime: eventData.allDay ? undefined : eventData.endTime,
             location: eventData.location,
             allDay: eventData.allDay,
-            category: 'events',
+            category: eventData.category,
             notes: eventData.notes,
           });
         }}
