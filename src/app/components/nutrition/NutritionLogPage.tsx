@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { format, parseISO, subDays } from 'date-fns';
+import { useState, useEffect, useMemo } from 'react';
+import { format, parseISO, subDays, startOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import type { DailyNutritionSummary, MealType } from '../../types';
+import type { DailyNutritionSummary, MealType, Meal } from '../../types';
 
 function ProgressBar({ current, target, color }: { current: number; target: number; color: string }) {
   const percentage = target > 0 ? (current / target) * 100 : 0;
@@ -35,13 +35,45 @@ function MealTypeIcon({ type }: { type?: MealType }) {
 }
 
 export function NutritionLogPage() {
-  const { getDaySummary, logMealEaten, logCustomFood, updateLogEntry, deleteLogEntry, meals } = useApp();
+  const { getDaySummary, logMealEaten, logCustomFood, updateLogEntry, deleteLogEntry, meals, getWeekPlan } = useApp();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [daySummary, setDaySummary] = useState<DailyNutritionSummary | null>(null);
   const [sevenDayData, setSevenDayData] = useState<DailyNutritionSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEntry, setNewEntry] = useState({ label: '', mealType: '', calories: '', protein: '', carbs: '', fat: '' });
+
+  const todaysMeals = useMemo(() => {
+    const weekStart = startOfWeek(parseISO(`${selectedDate}T00:00:00`), { weekStartsOn: 1 });
+    const weekStartStr = format(weekStart, 'yyyy-MM-dd');
+    const plan = getWeekPlan(weekStartStr);
+    if (!plan) return [];
+
+    const dayPlan = plan.days.find(d => d.date === selectedDate);
+    if (!dayPlan) return [];
+
+    const slots = ['breakfast', 'lunch', 'snack', 'proteinShake', 'dinner'] as const;
+    const plannedMeals: (Meal & { mealType: MealType })[] = [];
+
+    slots.forEach((slot) => {
+      const mealId = dayPlan[slot];
+      if (mealId) {
+        const meal = meals.find(m => m.id === mealId);
+        if (meal) {
+          const mealTypeMap: Record<string, MealType> = {
+            breakfast: 'Breakfast',
+            lunch: 'Lunch',
+            snack: 'Snack',
+            proteinShake: 'Protein Shake',
+            dinner: 'Dinner',
+          };
+          plannedMeals.push({ ...meal, mealType: mealTypeMap[slot] });
+        }
+      }
+    });
+
+    return plannedMeals;
+  }, [selectedDate, getWeekPlan, meals]);
 
   useEffect(() => {
     (async () => {
@@ -84,6 +116,20 @@ export function NutritionLogPage() {
       fat: newEntry.fat ? parseInt(newEntry.fat) : undefined,
     });
     setNewEntry({ label: '', mealType: '', calories: '', protein: '', carbs: '', fat: '' });
+    setShowAddModal(false);
+    const summary = await getDaySummary(selectedDate);
+    setDaySummary(summary);
+  };
+
+  const handleAddPlannedMeal = async (meal: Meal & { mealType: MealType }) => {
+    await logCustomFood({
+      label: meal.name,
+      mealType: meal.mealType,
+      calories: meal.nutritionalValue.calories,
+      protein: meal.nutritionalValue.protein,
+      carbs: meal.nutritionalValue.carbs,
+      fat: meal.nutritionalValue.fat,
+    });
     setShowAddModal(false);
     const summary = await getDaySummary(selectedDate);
     setDaySummary(summary);
@@ -254,8 +300,28 @@ export function NutritionLogPage() {
       {/* Add food modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-lg border border-gray-200 dark:border-gray-700">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-lg border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Log Food</h3>
+
+            {todaysMeals.length > 0 && (
+              <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase">Today's Planned Meals</p>
+                <div className="space-y-2">
+                  {todaysMeals.map((meal) => (
+                    <button
+                      key={meal.id}
+                      onClick={() => handleAddPlannedMeal(meal)}
+                      className="w-full text-left p-2.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                    >
+                      <div className="font-medium text-gray-900 dark:text-white text-sm">{meal.name}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">{meal.nutritionalValue.calories} kcal • {meal.nutritionalValue.protein}g protein</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-3 uppercase">Or Add Custom Food</p>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Food name</label>

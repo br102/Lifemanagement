@@ -8,6 +8,7 @@ import {
   isSameMonth, getDay, startOfMonth, endOfMonth, eachDayOfInterval, isToday,
 } from 'date-fns';
 import { useApp } from '../../context/AppContext';
+import { MealDetailModal } from '../meals/MealDetailModal';
 import type { Meal, MealType } from '../../types';
 
 const TYPE_COLORS: Record<string, string> = {
@@ -117,7 +118,7 @@ interface DailyNutrients {
   fat: number;
 }
 
-function WeekView({ weekStart }: { weekStart: Date }) {
+function WeekView({ weekStart, onMealClick }: { weekStart: Date; onMealClick: (meal: Meal) => void }) {
   const { meals, getWeekPlan } = useApp();
   const [pickerInfo, setPickerInfo] = useState<{ slot: Slot; date: string; mealId?: string } | null>(null);
 
@@ -187,7 +188,7 @@ function WeekView({ weekStart }: { weekStart: Date }) {
                 return (
                   <div
                     key={dateStr}
-                    onClick={() => setPickerInfo({ slot, date: dateStr, mealId })}
+                    onClick={() => meal ? onMealClick(meal) : setPickerInfo({ slot, date: dateStr, mealId })}
                     className={`relative min-h-[80px] rounded-xl cursor-pointer transition-all hover:shadow-md group ${
                       meal
                         ? `border-l-4 ${TYPE_COLORS[SLOT_LABELS[slot]]} border border-transparent`
@@ -202,7 +203,7 @@ function WeekView({ weekStart }: { weekStart: Date }) {
                           <p className="text-gray-400 dark:text-gray-500" style={{ fontSize: '0.62rem' }}>{meal.nutritionalValue.calories} kcal</p>
                         </div>
                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="w-5 h-5 bg-white dark:bg-gray-700 rounded-full shadow flex items-center justify-center">
+                          <div className="w-5 h-5 bg-white dark:bg-gray-700 rounded-full shadow flex items-center justify-center" onClick={(e) => { e.stopPropagation(); setPickerInfo({ slot, date: dateStr, mealId }); }}>
                             <Pencil className="w-2.5 h-2.5 text-gray-500 dark:text-gray-400" />
                           </div>
                         </div>
@@ -307,12 +308,13 @@ function MonthView({ currentDate, showMeals, onDayClick }: { currentDate: Date; 
 export function MealPlannerPage() {
   const { aiGenerateMealPlan, saveWeekPlan } = useApp();
   const [view, setView] = useState<'week' | 'month'>('week');
-  const [currentDate, setCurrentDate] = useState(() => new Date(2026, 3, 27));
+  const [currentDate, setCurrentDate] = useState(() => new Date());
   const [showMeals, setShowMeals] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [showGenMenu, setShowGenMenu] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [selectedMeal, setSelectedMeal] = useState<Meal | null>(null);
 
   const weekStart = useMemo(() => startOfWeek(currentDate, { weekStartsOn: 1 }), [currentDate]);
   const weekEnd = useMemo(() => addDays(weekStart, 6), [weekStart]);
@@ -460,7 +462,7 @@ export function MealPlannerPage() {
       )}
       <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-amber-50 dark:border-gray-700">
         {view === 'week' ? (
-          <WeekView weekStart={weekStart} />
+          <WeekView weekStart={weekStart} onMealClick={setSelectedMeal} />
         ) : (
           <MonthView currentDate={currentDate} showMeals={showMeals} onDayClick={handleMonthDayClick} />
         )}
@@ -481,6 +483,14 @@ export function MealPlannerPage() {
       </div>
 
       {showGenMenu && <div className="fixed inset-0 z-10" onClick={() => setShowGenMenu(false)} />}
+
+      {selectedMeal && (
+        <MealDetailModal
+          meal={selectedMeal}
+          onClose={() => setSelectedMeal(null)}
+          onEdit={() => {}}
+        />
+      )}
     </div>
   );
 }
