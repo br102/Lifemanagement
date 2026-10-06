@@ -1,16 +1,15 @@
 import { useState, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { ShoppingCart, Sparkles, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Check, Clock, AlertCircle, CheckCircle2, Leaf, Package, Fish, Milk, Wheat, Snowflake, Coffee, Trash2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, addWeeks } from 'date-fns';
 import { useApp } from '../../context/AppContext';
 import type { GroceryItem } from '../../types';
 
-const WEEK_STARTS = [
-  '2026-04-27',
-  '2026-05-04',
-  '2026-05-11',
-  '2026-04-20',
-];
+function getTodayWeekStart(): string {
+  const today = new Date();
+  const monday = startOfWeek(today, { weekStartsOn: 1 });
+  return monday.toISOString().slice(0, 10);
+}
 
 const CATEGORY_ICONS: Record<string, ReactNode> = {
   'Produce': <Leaf className="w-4 h-4 text-green-500" />,
@@ -121,12 +120,12 @@ function CategorySection({ category, items, listId }: CategorySectionProps) {
 
 export function GroceriesPage() {
   const { weekPlans, groceryLists, getGroceryList, saveGroceryList, aiGenerateGroceryList } = useApp();
-  const [selectedWeek, setSelectedWeek] = useState('2026-04-27');
+  const [selectedWeek, setSelectedWeek] = useState(getTodayWeekStart);
   const [generating, setGenerating] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'done'>('all');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const availableWeeks = [...new Set([...WEEK_STARTS, ...weekPlans.map(p => p.startDate)])].sort();
+  const availableWeeks = [...new Set(weekPlans.map(p => p.startDate))].sort().reverse();
   const groceryList = getGroceryList(selectedWeek);
 
   const categorized = useMemo(() => {

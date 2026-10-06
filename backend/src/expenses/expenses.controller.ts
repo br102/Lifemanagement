@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UploadedFile, UseFilters, UseInterceptors, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, Patch, Put, Delete, UploadedFile, UseFilters, UseInterceptors, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -6,7 +6,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { MulterExceptionFilter } from '../common/filters/multer-exception.filter';
 import { SupabaseImageStorageService } from '../storage/supabase-image-storage.service';
 import { ExpensesService } from './expenses.service';
-import { ConfirmReceiptDto, ParseReceiptDto } from './dto/upload-receipt.dto';
+import { ConfirmReceiptDto, ParseReceiptDto, UpdateIngredientDto, UpdateIngredientPriceDto, UpdateReceiptDto, UpsertBudgetsDto } from './dto/upload-receipt.dto';
 
 @ApiTags('expenses')
 @ApiBearerAuth()
@@ -59,6 +59,46 @@ export class ExpensesController {
   @Get('groceries/:weekStartDate/estimate')
   async getGroceryEstimate(@CurrentUser() user: { userId: string }, @Param('weekStartDate') weekStartDate: string) {
     return this.expensesService.getGroceryEstimate(user.userId, weekStartDate);
+  }
+
+  @Patch('ingredients/:id')
+  async updateIngredient(@CurrentUser() user: { userId: string }, @Param('id') id: string, @Body() dto: UpdateIngredientDto) {
+    return this.expensesService.updateIngredient(user.userId, id, dto);
+  }
+
+  @Patch('ingredients/prices/:id')
+  async updateIngredientPrice(@CurrentUser() user: { userId: string }, @Param('id') id: string, @Body() dto: UpdateIngredientPriceDto) {
+    return this.expensesService.updateIngredientPrice(user.userId, id, dto);
+  }
+
+  @Delete('ingredients/prices/:id')
+  async deleteIngredientPrice(@CurrentUser() user: { userId: string }, @Param('id') id: string) {
+    return this.expensesService.deleteIngredientPrice(user.userId, id);
+  }
+
+  @Patch('receipts/:id')
+  async updateReceipt(@CurrentUser() user: { userId: string }, @Param('id') id: string, @Body() dto: UpdateReceiptDto) {
+    return this.expensesService.updateReceipt(user.userId, id, dto);
+  }
+
+  @Delete('receipts/:id')
+  async deleteReceipt(@CurrentUser() user: { userId: string }, @Param('id') id: string) {
+    return this.expensesService.deleteReceipt(user.userId, id);
+  }
+
+  @Get('spending/monthly')
+  async getMonthlySpending(@CurrentUser() user: { userId: string }) {
+    return this.expensesService.getMonthlySpending(user.userId, 6);
+  }
+
+  @Get('budgets/:month')
+  async getBudgets(@CurrentUser() user: { userId: string }, @Param('month') month: string) {
+    return this.expensesService.getBudgets(user.userId, month);
+  }
+
+  @Put('budgets/:month')
+  async upsertBudgets(@CurrentUser() user: { userId: string }, @Param('month') month: string, @Body() dto: UpsertBudgetsDto) {
+    return this.expensesService.upsertBudgets(user.userId, month, dto);
   }
 }
 

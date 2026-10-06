@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
-import { ConfirmReceiptDto, ReceiptLineItemDto } from './dto/upload-receipt.dto';
+import { ConfirmReceiptDto, ReceiptLineItemDto, UpdateIngredientDto, UpdateIngredientPriceDto, UpdateReceiptDto, UpsertBudgetsDto } from './dto/upload-receipt.dto';
 import { AiProvider, ReceiptParseResult } from '../ai/ai-provider.interface';
 
 @Injectable()
@@ -81,12 +81,194 @@ export class ExpensesService {
 
     return prices.map((p) => ({
       ingredientId: p.ingredientId,
+      priceId: p.id,
       name: p.ingredient.name,
+      category: p.ingredient.category,
       unitPrice: p.unitPrice,
       unit: p.unit,
       purchaseDate: p.purchaseDate,
       currency: p.currency,
     }));
+  }
+
+  async updateIngredient(userId: string, ingredientId: string, dto: UpdateIngredientDto) {
+    const ingredient = await this.prisma.ingredient.findUniqueOrThrow({ where: { id: ingredientId } });
+    return this.prisma.ingredient.update({
+      where: { id: ingredientId },
+      data: {
+        ...(dto.name && { name: dto.name }),
+        ...(dto.category && { category: dto.category }),
+      },
+    });
+  }
+
+  async updateIngredientPrice(userId: string, priceId: string, dto: UpdateIngredientPriceDto) {
+    const existingPrice = await this.prisma.ingredientPrice.findFirst({
+      where: { id: priceId, userId },
+    });
+    if (!existingPrice) throw new NotFoundException('Ingredient price not found');
+
+    const quantity = dto.quantity ?? existingPrice.quantity;
+    const unit = dto.unit ?? existingPrice.unit;
+    const price = dto.price ?? existingPrice.price;
+    const unitPrice = this.calculateUnitPrice(quantity, unit, price);
+
+    return this.prisma.ingredientPrice.update({
+      where: { id: priceId },
+      data: {
+        ...(dto.price !== undefined && { price }),
+        ...(dto.quantity !== undefined && { quantity }),
+        ...(dto.unit && { unit }),
+        ...(dto.purchaseDate && { purchaseDate: dto.purchaseDate }),
+        unitPrice,
+      },
+      include: { ingredient: true },
+    });
+  }
+
+  async deleteIngredientPrice(userId: string, priceId: string) {
+    const price = await this.prisma.ingredientPrice.findFirst({
+      where: { id: priceId, userId },
+    });
+    if (!price) throw new NotFoundException('Ingredient price not found');
+
+    return this.prisma.ingredientPrice.delete({ where: { id: priceId } });
+  }
+
+  async updateReceipt(userId: string, receiptId: string, dto: UpdateReceiptDto) {
+    const receipt = await this.prisma.receipt.findFirst({
+      where: { id: receiptId, userId },
+      include: { prices: { include: { ingredient: true } } },
+    });
+    if (!receipt) throw new NotFoundException('Receipt not found');
+
+    return this.prisma.$transaction(
+      async (tx) => {
+        const updated = await tx.receipt.update({
+          where: { id: receiptId },
+          data: {
+            ...(dto.store && { store: dto.store }),
+            ...(dto.purchaseDate && { purchaseDate: dto.purchaseDate }),
+            ...(dto.totalAmount !== undefined && { totalAmount: dto.totalAmount }),
+            ...(dto.currency && { currency: dto.currency }),
+          },
+        });
+
+        if (dto.items && dto.items.length > 0) {
+          await tx.ingredientPrice.deleteMany({ where: { receiptId } });
+
+          for (const item of dto.items) {
+            const ingredient = await tx.ingredient.upsert({
+              where: { name: item.name },
+              create: { name: item.name },
+              update: {},
+            });
+
+            const unitPrice = this.calculateUnitPrice(item.quantity, item.unit, item.price);
+            await tx.ingredientPrice.create({
+              data: {
+                userId,
+                ingredientId: ingredient.id,
+                receiptId,
+                price: item.price,
+                quantity: item.quantity,
+                unit: item.unit,
+                unitPrice,
+                currency: updated.currency,
+                purchaseDate: updated.purchaseDate,
+              },
+            });
+          }
+        }
+
+        return tx.receipt.findUniqueOrThrow({
+          where: { id: receiptId },
+          include: { prices: { include: { ingredient: true } } },
+        });
+      },
+      { timeout: 30000 },
+    );
+  }
+
+  async deleteReceipt(userId: string, receiptId: string) {
+    const receipt = await this.prisma.receipt.findFirst({
+      where: { id: receiptId, userId },
+    });
+    if (!receipt) throw new NotFoundException('Receipt not found');
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.ingredientPrice.deleteMany({ where: { receiptId } });
+      return tx.receipt.delete({ where: { id: receiptId } });
+    });
+  }
+
+  async getMonthlySpending(userId: string, months = 6) {
+    const prices = await this.prisma.ingredientPrice.findMany({
+      where: { userId },
+      include: { ingredient: true },
+      orderBy: { purchaseDate: 'asc' },
+    });
+
+    const spending = new Map<string, { total: number; byCategory: Record<string, number> }>();
+
+    for (const price of prices) {
+      const month = price.purchaseDate.substring(0, 7);
+      if (!spending.has(month)) {
+        spending.set(month, { total: 0, byCategory: {} });
+      }
+      const monthData = spending.get(month)!;
+      monthData.total += price.price;
+      const category = price.ingredient.category || 'Other';
+      monthData.byCategory[category] = (monthData.byCategory[category] || 0) + price.price;
+    }
+
+    const now = new Date();
+    const result = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const month = date.toISOString().substring(0, 7);
+      result.push({
+        month,
+        total: spending.get(month)?.total || 0,
+        byCategory: spending.get(month)?.byCategory || {},
+      });
+    }
+    return result;
+  }
+
+  async getBudgets(userId: string, month: string) {
+    const budgets = await this.prisma.monthlyBudget.findMany({
+      where: { userId, month },
+    });
+
+    const spending = await this.getMonthlySpending(userId, 1);
+    const monthSpending = spending[spending.length - 1];
+    const spendByCategory = monthSpending?.byCategory || {};
+
+    return budgets.map((b) => ({
+      category: b.category,
+      limit: b.amountLimit,
+      spent: spendByCategory[b.category] || 0,
+      currency: b.currency,
+    }));
+  }
+
+  async upsertBudgets(userId: string, month: string, dto: UpsertBudgetsDto) {
+    const upsertPromises = dto.items.map((item) =>
+      this.prisma.monthlyBudget.upsert({
+        where: { userId_month_category: { userId, month, category: item.category } },
+        create: {
+          userId,
+          month,
+          category: item.category,
+          amountLimit: item.amountLimit,
+        },
+        update: {
+          amountLimit: item.amountLimit,
+        },
+      }),
+    );
+    return Promise.all(upsertPromises);
   }
 
   async getMealCosts(userId: string) {
@@ -247,7 +429,9 @@ export class ExpensesService {
       totalAmount: receipt.totalAmount,
       currency: receipt.currency,
       items: (receipt.prices || []).map((p: any) => ({
+        priceId: p.id,
         name: p.ingredient.name,
+        category: p.ingredient.category,
         quantity: p.quantity,
         unit: p.unit,
         price: p.price,

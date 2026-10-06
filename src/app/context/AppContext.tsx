@@ -21,6 +21,8 @@ import type {
   ScheduleOccurrence,
   NutritionLogEntry,
   DailyNutritionSummary,
+  MonthlySpendPoint,
+  BudgetCategory,
 } from '../types';
 
 interface AppContextType {
@@ -96,6 +98,13 @@ interface AppContextType {
   loadIngredientPrices: () => Promise<IngredientPrice[]>;
   loadMealCosts: () => Promise<MealCostEstimate[]>;
   getGroceryEstimate: (weekStartDate: string) => Promise<GroceryEstimate>;
+  updateIngredientPrice: (priceId: string, updates: { price?: number; quantity?: number; unit?: string; purchaseDate?: string }) => Promise<void>;
+  deleteIngredientPrice: (priceId: string) => Promise<void>;
+  updateReceipt: (receiptId: string, updates: { store?: string; purchaseDate?: string; totalAmount?: number; currency?: string; items?: ReceiptLineItem[] }) => Promise<void>;
+  deleteReceipt: (receiptId: string) => Promise<void>;
+  loadMonthlySpending: (months?: number) => Promise<MonthlySpendPoint[]>;
+  loadBudgets: (month: string) => Promise<BudgetCategory[]>;
+  saveBudgets: (month: string, items: Array<{ category: string; amountLimit: number }>) => Promise<void>;
   saveCalendarEvent: (event: Omit<CalendarEvent, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CalendarEvent>;
   deleteCalendarEvent: (id: string) => Promise<void>;
   saveSchedule: (schedule: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Schedule>;
@@ -646,6 +655,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return result as GroceryEstimate;
   }, []);
 
+  const updateIngredientPrice = useCallback(async (priceId: string, updates: { price?: number; quantity?: number; unit?: string; purchaseDate?: string }) => {
+    await authFetch(`/expenses/ingredients/prices/${priceId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }, []);
+
+  const deleteIngredientPrice = useCallback(async (priceId: string) => {
+    await authFetch(`/expenses/ingredients/prices/${priceId}`, { method: 'DELETE' });
+  }, []);
+
+  const updateReceipt = useCallback(async (receiptId: string, updates: { store?: string; purchaseDate?: string; totalAmount?: number; currency?: string; items?: ReceiptLineItem[] }) => {
+    await authFetch(`/expenses/receipts/${receiptId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }, []);
+
+  const deleteReceipt = useCallback(async (receiptId: string) => {
+    await authFetch(`/expenses/receipts/${receiptId}`, { method: 'DELETE' });
+  }, []);
+
+  const loadMonthlySpending = useCallback(async (months = 6) => {
+    const result = await authFetch(`/expenses/spending/monthly?months=${months}`);
+    return (result || []) as MonthlySpendPoint[];
+  }, []);
+
+  const loadBudgets = useCallback(async (month: string) => {
+    const result = await authFetch(`/expenses/budgets/${month}`);
+    return (result || []) as BudgetCategory[];
+  }, []);
+
+  const saveBudgets = useCallback(async (month: string, items: Array<{ category: string; amountLimit: number }>) => {
+    await authFetch(`/expenses/budgets/${month}`, {
+      method: 'PUT',
+      body: JSON.stringify({ items }),
+    });
+  }, []);
+
   const logMealEaten = useCallback(async (mealId: string, mealType?: MealType, quantity?: number, notes?: string) => {
     const today = new Date();
     const date = today.toISOString().slice(0, 10);
@@ -749,6 +797,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         loadIngredientPrices,
         loadMealCosts,
         getGroceryEstimate,
+        updateIngredientPrice,
+        deleteIngredientPrice,
+        updateReceipt,
+        deleteReceipt,
+        loadMonthlySpending,
+        loadBudgets,
+        saveBudgets,
         saveCalendarEvent,
         deleteCalendarEvent,
         saveSchedule,

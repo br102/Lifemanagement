@@ -165,7 +165,9 @@ export interface TrainingBalance {
 }
 
 export interface ReceiptLineItem {
+  priceId?: string;
   name: string;
+  category?: string;
   quantity: number;
   unit: string;
   price: number;
@@ -185,10 +187,25 @@ export interface Receipt {
 
 export interface IngredientPrice {
   ingredientId: string;
+  priceId?: string;
   name: string;
+  category?: string;
   unitPrice: number;
   unit: string;
   purchaseDate: string;
+  currency: string;
+}
+
+export interface MonthlySpendPoint {
+  month: string;
+  total: number;
+  byCategory: Record<string, number>;
+}
+
+export interface BudgetCategory {
+  category: string;
+  limit: number;
+  spent: number;
   currency: string;
 }
 
