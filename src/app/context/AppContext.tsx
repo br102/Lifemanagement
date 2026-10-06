@@ -47,6 +47,7 @@ interface AppContextType {
   updateMeal: (meal: Meal) => Promise<void>;
   deleteMeal: (id: string) => Promise<void>;
   getWeekPlan: (weekStartDate: string) => WeekPlan | undefined;
+  loadWeekPlan: (weekStartDate: string) => Promise<void>;
   saveWeekPlan: (plan: WeekPlan) => void;
   addMealToSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner', mealId: string) => Promise<void>;
   removeMealFromSlot: (weekStartDate: string, date: string, slot: 'breakfast' | 'lunch' | 'snack' | 'proteinShake' | 'dinner') => Promise<void>;
@@ -767,6 +768,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateMeal,
         deleteMeal,
         getWeekPlan,
+        loadWeekPlan,
         saveWeekPlan,
         addMealToSlot,
         removeMealFromSlot,

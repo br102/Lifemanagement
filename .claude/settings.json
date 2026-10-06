@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m 'Fix: Add loadWeekPlan to AppContext exports *)"
+    ]
+  }
+}
